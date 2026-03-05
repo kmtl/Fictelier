@@ -361,6 +361,13 @@ export default function App() {
     return h.replace(/\n/g, '<br/>') + ' ';
   };
 
+  // スクロール同期用のハンドラ
+  const handleScroll = (e) => {
+    if (backdropRef.current) {
+      backdropRef.current.scrollTop = e.target.scrollTop;
+    }
+  };
+
   const handleTextareaClick = (e) => {
     const pos = e.target.selectionStart;
     const text = activeItem?.content || "";
@@ -431,7 +438,7 @@ export default function App() {
           <button onClick={() => setErrorMessage(null)} className="ml-2 hover:opacity-70"><X size={16} /></button>
         </div>
       )}
-      <div className="flex flex-col items-center gap-8 max-w-sm w-full px-8 text-center">
+      <div className="flex flex-col items-center gap-8 max-sm w-full px-8 text-center">
         <div className="space-y-4">
           <FictelierLogo size={80} className="text-indigo-500 mx-auto" />
           <h1 className="text-5xl font-black italic tracking-tighter">Fictelier</h1>
@@ -564,8 +571,10 @@ export default function App() {
             <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-950 min-h-[calc(100vh-12rem)] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200 dark:border-zinc-800 rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8">
               <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className="w-full text-5xl font-black bg-transparent border-none outline-none focus:ring-0 mb-12 tracking-tighter italic placeholder:opacity-20" placeholder="Title..." />
               <div className="relative flex-1">
-                <div ref={backdropRef} className="absolute inset-0 p-0 text-xl leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent" dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                <textarea ref={textareaRef} value={activeItem.content} onScroll={(e) => { if(backdropRef.current) backdropRef.current.scrollTop = e.target.scrollTop; }} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className="absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 text-xl leading-[2.2] font-serif resize-none p-0 dark:caret-white placeholder:opacity-20" spellCheck="false" placeholder="Once upon a time..." />
+                {/* ハイライト表示レイヤー: overflow-hiddenを追加してscrollTop同期を有効化 */}
+                <div ref={backdropRef} className="absolute inset-0 p-0 text-xl leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden" dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
+                {/* 編集用テキストエリア: handleScrollでバックドロップを同期 */}
+                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className="absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 text-xl leading-[2.2] font-serif resize-none p-0 dark:caret-white placeholder:opacity-20" spellCheck="false" placeholder="Once upon a time..." />
               </div>
             </div>
           ) : (
