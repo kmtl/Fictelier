@@ -186,8 +186,6 @@ export default function App() {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         }
-        // ここにあった else { await signInAnonymously(auth); } を削除し、
-        // ユーザーがボタンを押すまで自動でゲストログインしないように修正しました。
       } catch (e) {
         console.error("Fictelier: Auth init failed", e.message);
       }
@@ -293,7 +291,6 @@ export default function App() {
       const data = list.find(it => it.id === rootId);
       if (data) {
         await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, colName, rootId), data, { merge: true });
-        // updateDoc ではなく setDoc ({ merge: true }) を使うことで、親プロジェクトが存在しない場合のエラーを回避
         await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { updatedAt: Date.now() }, { merge: true });
       }
       setSaveStatus('saved');
@@ -302,7 +299,7 @@ export default function App() {
 
   const triggerSave = useCallback((rootId, type = 'item') => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    if (!rootId) return; // IDがない場合は早期リターン
+    if (!rootId) return;
     setSaveStatus('dirty');
     saveTimeoutRef.current = setTimeout(() => saveRootDoc(rootId, type), AUTO_SAVE_DEBOUNCE_MS);
   }, [saveRootDoc]);
@@ -392,7 +389,6 @@ export default function App() {
         if (parent) {
           const updatedChildren = parent.children.filter(c => c.id !== id);
           setItems(prev => prev.map(it => it.id === parentId ? { ...it, children: updatedChildren } : it));
-          // updateDoc ではなく setDoc ({ merge: true }) を使って堅牢性を向上
           await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, parentId), { children: updatedChildren }, { merge: true });
         }
       } else if (type === 'category') {
@@ -403,7 +399,6 @@ export default function App() {
         if (cat) {
           const updatedChildren = cat.children.filter(c => c.id !== id);
           setNotes(prev => prev.map(c => c.id === parentId ? { ...c, children: updatedChildren } : c));
-          // FirebaseError: No document to update 回避のため setDoc に変更
           await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_notes_${activeProjectId}`, parentId), { children: updatedChildren }, { merge: true });
         }
       }
@@ -478,7 +473,7 @@ export default function App() {
   if (loading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-600 gap-6">
       <Loader2 className="animate-spin" size={40} />
-      <p className="text-[10px] font-black tracking-widest uppercase opacity-50">Entering Fictelier v1.2...</p>
+      <p className="text-[10px] font-black tracking-widest uppercase opacity-50">Entering Fictelier v1.3...</p>
     </div>
   );
 
@@ -553,7 +548,7 @@ export default function App() {
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'}`}>
       {deleteTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`rounded-3xl p-8 max-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
+          <div className={`rounded-3xl p-8 max-w-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
             <div className="flex flex-col items-center text-center space-y-4">
               <div className={`p-4 rounded-full ${isDarkMode ? 'bg-red-950/30 text-red-400' : 'bg-red-50 text-red-500'}`}><AlertCircle size={32} /></div>
               <div className="space-y-2"><h3 className="text-lg font-black tracking-tight">項目を削除しますか？</h3><p className={`text-xs leading-relaxed ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>「{deleteTarget.title}」を削除します。</p></div>
@@ -568,12 +563,18 @@ export default function App() {
 
       {/* 左サイドバー */}
       <aside style={{ width: leftSidebarOpen ? `${leftWidth}px` : '0px' }} className={`flex-shrink-0 border-r flex flex-col z-30 overflow-hidden relative ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200'} ${isResizing ? '' : 'transition-[width] duration-300'}`}>
-        <div className={`h-16 flex items-center px-4 justify-between border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-900/30 border-zinc-800' : 'bg-zinc-50/30 border-zinc-200'}`}>
-          <div className="flex flex-col min-w-0">
-            <button onClick={() => setView('project_list')} className={`hover:text-indigo-500 transition-all flex items-center gap-1 group text-[8px] font-black uppercase tracking-widest truncate ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}><ChevronLeft size={10} /> Back</button>
-            <span className="text-xs font-black italic tracking-tighter flex items-center gap-1.5 truncate"><FictelierLogo size={14} className="text-indigo-500" /> OUTLINE</span>
+        <div className={`h-16 flex items-center relative border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-900/30 border-zinc-800' : 'bg-zinc-50/30 border-zinc-200'}`}>
+          <div className="absolute left-4 z-10">
+            <button onClick={() => setView('project_list')} className={`px-2 py-1.5 rounded-lg transition-all flex items-center gap-1 group text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800' : 'bg-zinc-200/50 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200'}`}>
+              <ChevronLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" /> BACK
+            </button>
           </div>
-          <button onClick={async () => { if(!db) return; const newId = generateId('ch'); const newCh = { id: newId, title: '新しい章', content: '', type: 'chapter', isOpen: true, order: Date.now(), children: [] }; setItems(prev => [...prev, newCh]); setActiveId(newId); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, newId), newCh); }} className={`p-1.5 text-indigo-500 rounded-lg transition-all ${isDarkMode ? 'hover:bg-indigo-900/40' : 'hover:bg-indigo-100'}`}><Plus size={18} /></button>
+          <div className="w-full flex justify-center pointer-events-none">
+            <span className="text-xs font-black italic tracking-tighter flex items-center gap-1.5 truncate pr-1"><FictelierLogo size={14} className="text-indigo-500" /> OUTLINE</span>
+          </div>
+          <div className="absolute right-4 z-10">
+            <button onClick={async () => { if(!db) return; const newId = generateId('ch'); const newCh = { id: newId, title: '新しい章', content: '', type: 'chapter', isOpen: true, order: Date.now(), children: [] }; setItems(prev => [...prev, newCh]); setActiveId(newId); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, newId), newCh); }} className={`p-1.5 text-indigo-500 rounded-lg transition-all ${isDarkMode ? 'hover:bg-indigo-900/40' : 'hover:bg-indigo-100'}`}><Plus size={18} /></button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
           <div className="px-2 py-2 mb-4">
@@ -612,9 +613,8 @@ export default function App() {
         <header className={`h-16 border-b flex items-center justify-between px-6 backdrop-blur-xl flex-shrink-0 z-20 ${isDarkMode ? 'bg-zinc-950/80 border-zinc-800' : 'bg-white/80 border-zinc-200'}`}>
           <div className="flex items-center gap-5">
             <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`p-2 rounded-xl transition-all ${leftSidebarOpen ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/40" : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>{leftSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}</button>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] text-indigo-400 font-black uppercase tracking-widest italic flex items-center gap-1"><FictelierLogo size={10} /> Manuscript Studio</span>
-              <h2 className="text-sm font-black italic truncate">{activeItem?.title || "Fictelier"}</h2>
+            <div className="flex items-center min-w-0">
+              <span className="text-sm font-black italic tracking-tighter flex items-center gap-1.5 truncate pr-2"><FictelierLogo size={16} className="text-indigo-500" /> Fictelier</span>
             </div>
           </div>
           <div className="flex items-center gap-6">
