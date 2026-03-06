@@ -76,10 +76,50 @@ const HIGHLIGHT_COLORS = [
 
 const generateId = (prefix = 'id') => `${prefix}-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
 
+// --------------------------------------------------------
+// [サブコンポーネント: 自動リサイズするテキストエリア]
+// --------------------------------------------------------
+const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode }) => {
+  const textareaRef = useRef(null);
+
+  const resize = () => {
+    const node = textareaRef.current;
+    if (node) {
+      node.style.height = 'auto';
+      node.style.height = node.scrollHeight + 'px';
+    }
+  };
+
+  // 値が変わったとき、またはマウントされたときにリサイズを実行
+  useEffect(() => {
+    // 少し待機してDOMの描画を確実に待つ
+    const timer = setTimeout(resize, 0);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className={`w-full bg-transparent border-none text-[13px] focus:ring-0 p-0 resize-none min-h-[24px] leading-[1.6] placeholder-zinc-400 overflow-hidden transition-[height] duration-100 ${
+        isDarkMode ? 'text-zinc-300' : 'text-zinc-600'
+      }`}
+      value={value}
+      rows={1}
+      onChange={(e) => {
+        onChange(e);
+        resize();
+      }}
+      onClick={(e) => e.stopPropagation()}
+      placeholder={placeholder}
+      spellCheck="false"
+    />
+  );
+};
+
 const FictelierLogo = ({ size = 24, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="currentColor" fillOpacity="0.1"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     <g transform="translate(1, 1) rotate(-5, 12, 12)">
       <path d="M21 3l-8.5 8.5" />
       <path d="M12.5 11.5l-3.5 3.5-1.5 5 5-1.5 3.5-3.5" />
@@ -106,7 +146,7 @@ export default function App() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [leftWidth, setLeftWidth] = useState(256);
-  const [rightWidth, setRightWidth] = useState(320);
+  const [rightWidth, setRightWidth] = useState(400); 
   const [isResizing, setIsResizing] = useState(false);
 
   const [saveStatus, setSaveStatus] = useState('saved'); 
@@ -361,7 +401,6 @@ export default function App() {
     return h.replace(/\n/g, '<br/>') + ' ';
   };
 
-  // スクロール同期用のハンドラ
   const handleScroll = (e) => {
     if (backdropRef.current) {
       backdropRef.current.scrollTop = e.target.scrollTop;
@@ -457,23 +496,23 @@ export default function App() {
     return (
       <div className={`min-h-screen w-full p-8 md:p-16 transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'}`}>
         <div className="max-w-6xl mx-auto space-y-12">
-          <header className="flex justify-between items-end border-b pb-8 dark:border-zinc-800">
+          <header className={`flex justify-between items-end border-b pb-8 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
             <div className="space-y-2">
               <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] flex items-center gap-2"><FictelierLogo size={14} /> My Archive</span>
               <h1 className="text-6xl font-black italic tracking-tighter flex items-center gap-4"><FictelierLogo size={52} className="text-indigo-500" /> Fictelier</h1>
             </div>
             <div className="flex items-center gap-4">
                {user?.isAnonymous && <button onClick={handleGoogleLogin} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-indigo-600 transition-all active:scale-95"><LogIn size={16} /> Google連携して保存</button>}
-               <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-3 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-2xl transition-all">{isDarkMode ? <Sun size={24} className="text-amber-400" /> : <Moon size={24} />}</button>
+               <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-3 rounded-2xl transition-all ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-200'}`}>{isDarkMode ? <Sun size={24} className="text-amber-400" /> : <Moon size={24} />}</button>
                <button onClick={handleSignOut} className="p-3 text-zinc-400 hover:text-red-500 transition-colors"><LogOut size={24} /></button>
             </div>
           </header>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <button onClick={createNewProject} className="group h-[240px] border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all active:scale-95"><div className="p-4 bg-zinc-100 dark:bg-zinc-900 rounded-full group-hover:bg-indigo-500 group-hover:text-white transition-all"><Plus size={32} /></div><span className="text-xs font-black uppercase tracking-widest opacity-40 group-hover:opacity-100 group-hover:text-indigo-500">Create New Story</span></button>
+            <button onClick={createNewProject} className={`group h-[240px] border-2 border-dashed rounded-[2.5rem] flex flex-col items-center justify-center gap-4 transition-all active:scale-95 ${isDarkMode ? 'border-zinc-800 hover:border-indigo-500 hover:bg-indigo-900/10' : 'border-zinc-200 hover:border-indigo-500 hover:bg-indigo-50/30'}`}><div className={`p-4 rounded-full group-hover:bg-indigo-500 group-hover:text-white transition-all ${isDarkMode ? 'bg-zinc-900' : 'bg-zinc-100'}`}><Plus size={32} /></div><span className={`text-xs font-black uppercase tracking-widest opacity-40 group-hover:opacity-100 group-hover:text-indigo-500`}>Create New Story</span></button>
             {projects.map(proj => (
-              <div key={proj.id} className="group relative h-[240px] bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 shadow-sm border border-transparent hover:border-indigo-500/30 hover:shadow-2xl transition-all cursor-pointer flex flex-col justify-between overflow-hidden" onClick={() => { setActiveProjectId(proj.id); setView('editor'); }}>
-                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: proj.id, title: proj.title, type: 'project' }); }} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all"><Trash2 size={18} /></button></div>
-                <div className="space-y-4"><div className="inline-flex p-3 bg-zinc-50 dark:bg-zinc-950 text-zinc-400 dark:text-zinc-600 rounded-2xl group-hover:text-indigo-500 transition-colors"><Book size={24} /></div><h3 className="text-xl font-black leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{proj.title}</h3></div>
+              <div key={proj.id} className={`group relative h-[240px] rounded-[2.5rem] p-8 shadow-sm border border-transparent transition-all cursor-pointer flex flex-col justify-between overflow-hidden ${isDarkMode ? 'bg-zinc-900 hover:border-indigo-500/30 hover:shadow-indigo-950/20' : 'bg-white hover:border-indigo-500/30 hover:shadow-2xl'}`} onClick={() => { setActiveProjectId(proj.id); setView('editor'); }}>
+                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: proj.id, title: proj.title, type: 'project' }); }} className={`p-2 rounded-xl transition-all ${isDarkMode ? 'text-zinc-500 hover:text-red-400 hover:bg-red-950/30' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'}`}><Trash2 size={18} /></button></div>
+                <div className="space-y-4"><div className={`inline-flex p-3 rounded-2xl group-hover:text-indigo-500 transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-600' : 'bg-zinc-50 text-zinc-400'}`}><Book size={24} /></div><h3 className="text-xl font-black leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">{proj.title}</h3></div>
                 <div className="text-[9px] font-black uppercase tracking-widest opacity-30 flex items-center gap-2"><Clock size={10} /> Updated {new Date(proj.updatedAt).toLocaleDateString()}</div>
               </div>
             ))}
@@ -488,12 +527,12 @@ export default function App() {
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'}`}>
       {deleteTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-sm w-full shadow-2xl border dark:border-zinc-800 scale-in-center">
+          <div className={`rounded-3xl p-8 max-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full"><AlertCircle size={32} /></div>
-              <div className="space-y-2"><h3 className="text-lg font-black tracking-tight">項目を削除しますか？</h3><p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">「{deleteTarget.title}」を削除します。</p></div>
+              <div className={`p-4 rounded-full ${isDarkMode ? 'bg-red-950/30 text-red-400' : 'bg-red-50 text-red-500'}`}><AlertCircle size={32} /></div>
+              <div className="space-y-2"><h3 className="text-lg font-black tracking-tight">項目を削除しますか？</h3><p className={`text-xs leading-relaxed ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>「{deleteTarget.title}」を削除します。</p></div>
               <div className="flex w-full gap-3 pt-4">
-                <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-bold transition-colors">キャンセル</button>
+                <button onClick={() => setDeleteTarget(null)} className={`flex-1 px-4 py-3 rounded-xl text-xs font-bold transition-colors ${isDarkMode ? 'bg-zinc-800 hover:bg-zinc-700' : 'bg-zinc-100 hover:bg-zinc-200'}`}>キャンセル</button>
                 <button onClick={confirmDelete} className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white text-xs font-bold shadow-lg transition-transform active:scale-95">削除する</button>
               </div>
             </div>
@@ -501,32 +540,33 @@ export default function App() {
         </div>
       )}
 
-      <aside style={{ width: leftSidebarOpen ? `${leftWidth}px` : '0px' }} className={`flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-zinc-900 z-30 overflow-hidden relative ${isResizing ? '' : 'transition-[width] duration-300'}`}>
-        <div className="h-16 flex items-center px-4 justify-between border-b dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/30 flex-shrink-0">
+      {/* 左サイドバー */}
+      <aside style={{ width: leftSidebarOpen ? `${leftWidth}px` : '0px' }} className={`flex-shrink-0 border-r flex flex-col z-30 overflow-hidden relative ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200'} ${isResizing ? '' : 'transition-[width] duration-300'}`}>
+        <div className={`h-16 flex items-center px-4 justify-between border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-900/30 border-zinc-800' : 'bg-zinc-50/30 border-zinc-200'}`}>
           <div className="flex flex-col min-w-0">
-            <button onClick={() => setView('project_list')} className="text-zinc-400 hover:text-indigo-500 transition-all flex items-center gap-1 group text-[8px] font-black uppercase tracking-widest truncate"><ChevronLeft size={10} /> Back</button>
+            <button onClick={() => setView('project_list')} className={`hover:text-indigo-500 transition-all flex items-center gap-1 group text-[8px] font-black uppercase tracking-widest truncate ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}><ChevronLeft size={10} /> Back</button>
             <span className="text-xs font-black italic tracking-tighter flex items-center gap-1.5 truncate"><FictelierLogo size={14} className="text-indigo-500" /> OUTLINE</span>
           </div>
-          <button onClick={async () => { if(!db) return; const newId = generateId('ch'); const newCh = { id: newId, title: '新しい章', content: '', type: 'chapter', isOpen: true, order: Date.now(), children: [] }; setItems(prev => [...prev, newCh]); setActiveId(newId); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, newId), newCh); }} className="p-1.5 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg transition-all"><Plus size={18} /></button>
+          <button onClick={async () => { if(!db) return; const newId = generateId('ch'); const newCh = { id: newId, title: '新しい章', content: '', type: 'chapter', isOpen: true, order: Date.now(), children: [] }; setItems(prev => [...prev, newCh]); setActiveId(newId); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, newId), newCh); }} className={`p-1.5 text-indigo-500 rounded-lg transition-all ${isDarkMode ? 'hover:bg-indigo-900/40' : 'hover:bg-indigo-100'}`}><Plus size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
           <div className="px-2 py-2 mb-4">
-             <input className="w-full bg-transparent border-none text-[11px] font-black italic focus:ring-0 p-0 text-zinc-400 opacity-60 hover:opacity-100 transition-opacity" value={projects.find(p => p.id === activeProjectId)?.title || ''} onChange={(e) => { if(!db) return; const title = e.target.value; setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, title } : p)); setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { title, updatedAt: Date.now() }, { merge: true }); }} />
+             <input className={`w-full bg-transparent border-none text-[11px] font-black italic focus:ring-0 p-0 transition-opacity ${isDarkMode ? 'text-zinc-500 opacity-60 hover:opacity-100' : 'text-zinc-400 opacity-60 hover:opacity-100'}`} value={projects.find(p => p.id === activeProjectId)?.title || ''} onChange={(e) => { if(!db) return; const title = e.target.value; setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, title } : p)); setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { title, updatedAt: Date.now() }, { merge: true }); }} />
           </div>
           {items.map((ch) => (
             <div key={ch.id} className="mb-3">
-              <div className={`flex items-center p-2.5 rounded-xl cursor-pointer group transition-all ${activeId === ch.id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800'}`} onClick={() => { setActiveId(ch.id); updateItemLocal(ch.id, { isOpen: !ch.isOpen }); }}>
+              <div className={`flex items-center p-2.5 rounded-xl cursor-pointer group transition-all ${activeId === ch.id ? (isDarkMode ? 'bg-indigo-900/30 text-indigo-400 font-bold' : 'bg-indigo-50 text-indigo-600 font-bold') : (isDarkMode ? 'hover:bg-zinc-900 text-zinc-400' : 'hover:bg-zinc-50 text-zinc-700')}`} onClick={() => { setActiveId(ch.id); updateItemLocal(ch.id, { isOpen: !ch.isOpen }); }}>
                 <div className="mr-2 opacity-50">{ch.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</div>
                 <span className="flex-1 truncate text-xs">{ch.title}</span>
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => { e.stopPropagation(); const newSceneId = generateId('sc'); updateItemLocal(ch.id, { children: [...(ch.children || []), { id: newSceneId, title: '新しいシーン', content: '', type: 'scene', order: Date.now() }], isOpen: true }); setActiveId(newSceneId); }} className="p-1 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-950 rounded"><Plus size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); const newSceneId = generateId('sc'); updateItemLocal(ch.id, { children: [...(ch.children || []), { id: newSceneId, title: '新しいシーン', content: '', type: 'scene', order: Date.now() }], isOpen: true }); setActiveId(newSceneId); }} className={`p-1 text-indigo-500 rounded transition-all ${isDarkMode ? 'hover:bg-indigo-950' : 'hover:bg-indigo-100'}`}><Plus size={14} /></button>
                   <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: ch.id, title: ch.title, type: 'chapter' }); }} className="p-1 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
               {ch.isOpen && ch.children && (
-                <div className="ml-4 mt-1 border-l-2 border-zinc-100 dark:border-zinc-800 pl-3 space-y-1">
+                <div className={`ml-4 mt-1 border-l-2 pl-3 space-y-1 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-100'}`}>
                   {ch.children.map((sc) => (
-                    <div key={sc.id} onClick={() => setActiveId(sc.id)} className={`flex items-center p-2 rounded-lg cursor-pointer group text-xs transition-all ${activeId === sc.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold border-l-2 border-indigo-500' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500'}`}>
+                    <div key={sc.id} onClick={() => setActiveId(sc.id)} className={`flex items-center p-2 rounded-lg cursor-pointer group text-xs transition-all ${activeId === sc.id ? (isDarkMode ? 'bg-indigo-900/40 text-indigo-400 font-bold border-l-2 border-indigo-500' : 'bg-indigo-50 text-indigo-600 font-bold border-l-2 border-indigo-500') : (isDarkMode ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-zinc-100 text-zinc-500')}`}>
                       <FileText size={12} className="mr-2 opacity-40" />
                       <span className="flex-1 truncate">{sc.title}</span>
                       <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: sc.id, title: sc.title, type: 'scene', parentId: ch.id }); }} className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
@@ -539,10 +579,11 @@ export default function App() {
         </div>
       </aside>
 
-      {leftSidebarOpen && <div onMouseDown={startResizingLeft} className={`w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-40 bg-zinc-200 dark:bg-zinc-800 flex-shrink-0 ${isResizing ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : ''}`} />}
+      {leftSidebarOpen && <div onMouseDown={startResizingLeft} className={`w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-40 flex-shrink-0 ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'} ${isResizing ? 'bg-indigo-500' : ''}`} />}
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-zinc-950 z-10 shadow-2xl overflow-hidden relative font-serif">
-        <header className="h-16 border-b dark:border-zinc-800 flex items-center justify-between px-6 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl flex-shrink-0 z-20">
+      {/* メインエディタ */}
+      <main className={`flex-1 flex flex-col min-w-0 z-10 shadow-2xl overflow-hidden relative font-serif transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-stone-900'}`}>
+        <header className={`h-16 border-b flex items-center justify-between px-6 backdrop-blur-xl flex-shrink-0 z-20 ${isDarkMode ? 'bg-zinc-950/80 border-zinc-800' : 'bg-white/80 border-zinc-200'}`}>
           <div className="flex items-center gap-5">
             <button onClick={() => setLeftSidebarOpen(!leftSidebarOpen)} className={`p-2 rounded-xl transition-all ${leftSidebarOpen ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/40" : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>{leftSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}</button>
             <div className="flex flex-col min-w-0">
@@ -551,104 +592,103 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-               <Type size={12} className="text-indigo-500" /><span className="text-zinc-800 dark:text-zinc-200">{activeItem?.content?.length || 0}</span><span className="opacity-40">chars</span>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-zinc-900 text-zinc-400' : 'bg-zinc-100 text-zinc-400'}`}>
+               <Type size={12} className="text-indigo-500" /><span className={`${isDarkMode ? 'text-zinc-200' : 'text-zinc-800'}`}>{activeItem?.content?.length || 0}</span><span className="opacity-40">chars</span>
             </div>
             <div className="min-w-[80px] flex justify-end">
-              {saveStatus === 'saved' && <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50/50 dark:bg-emerald-950/10 text-emerald-500 rounded-full border border-emerald-100/50 dark:border-emerald-900/20 text-[9px] font-black uppercase tracking-widest"><CheckCircle2 size={12} /> Saved</div>}
-              {saveStatus === 'saving' && <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50/50 dark:bg-indigo-950/10 text-indigo-500 rounded-full border border-indigo-100/50 dark:border-indigo-900/20 text-[9px] font-black uppercase tracking-widest"><Loader2 size={12} className="animate-spin" /> Saving</div>}
+              {saveStatus === 'saved' && <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-emerald-950/10 text-emerald-500 border-emerald-900/20' : 'bg-emerald-50/50 text-emerald-500 border-emerald-100/50'}`}><CheckCircle2 size={12} /> Saved</div>}
+              {saveStatus === 'saving' && <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-indigo-950/10 text-indigo-500 border-indigo-900/20' : 'bg-indigo-50/50 text-indigo-500 border-indigo-100/50'}`}><Loader2 size={12} className="animate-spin" /> Saving</div>}
             </div>
-            <div className="flex items-center gap-2 pl-4 border-l dark:border-zinc-800">
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all">{isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}</button>
+            <div className={`flex items-center gap-2 pl-4 border-l ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-xl transition-all ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'}`}>{isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}</button>
               <button onClick={() => setRightPanelOpen(!rightPanelOpen)} className={`p-2 rounded-xl transition-all ${rightPanelOpen ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/40" : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>{rightPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}</button>
             </div>
           </div>
         </header>
         <div className="flex-1 overflow-hidden relative custom-scroll overflow-y-auto">
           {!dataLoaded && activeProjectId ? (
-            <div className="h-full flex flex-col items-center justify-center gap-4 text-zinc-300"><Loader2 className="animate-spin" size={32} /><p className="text-xs font-bold uppercase tracking-widest">Loading Manuscript...</p></div>
+            <div className="h-full flex flex-col items-center justify-center gap-4 text-zinc-400"><Loader2 className="animate-spin" size={32} /><p className="text-xs font-bold uppercase tracking-widest">Loading Manuscript...</p></div>
           ) : activeItem ? (
-            <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-950 min-h-[calc(100vh-12rem)] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200 dark:border-zinc-800 rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8">
+            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-12rem)] rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
               <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className="w-full text-5xl font-black bg-transparent border-none outline-none focus:ring-0 mb-12 tracking-tighter italic placeholder:opacity-20" placeholder="Title..." />
               <div className="relative flex-1">
-                {/* ハイライト表示レイヤー: overflow-hiddenを追加してscrollTop同期を有効化 */}
                 <div ref={backdropRef} className="absolute inset-0 p-0 text-xl leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden" dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                {/* 編集用テキストエリア: handleScrollでバックドロップを同期 */}
-                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className="absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 text-xl leading-[2.2] font-serif resize-none p-0 dark:caret-white placeholder:opacity-20" spellCheck="false" placeholder="Once upon a time..." />
+                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 text-xl leading-[2.2] font-serif resize-none p-0 placeholder:opacity-20 ${isDarkMode ? 'caret-white text-zinc-100' : 'caret-black text-stone-900'}`} spellCheck="false" placeholder="Once upon a time..." />
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-200 dark:text-zinc-900"><Sparkles size={120} className="opacity-10 mb-8" /><p className="text-sm font-black tracking-widest uppercase opacity-40 text-center px-4">Select a piece to begin</p></div>
+            <div className={`h-full flex flex-col items-center justify-center opacity-10 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-300'}`}><Sparkles size={120} className="mb-8" /><p className="text-sm font-black tracking-widest uppercase text-center px-4">Select a piece to begin</p></div>
           )}
         </div>
       </main>
 
-      {rightPanelOpen && <div onMouseDown={startResizingRight} className={`w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-40 bg-zinc-200 dark:bg-zinc-800 flex-shrink-0 ${isResizing ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : ''}`} />}
+      {rightPanelOpen && <div onMouseDown={startResizingRight} className={`w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-40 flex-shrink-0 ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'} ${isResizing ? 'bg-indigo-500' : ''}`} />}
 
-      <aside style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }} className={`flex-shrink-0 border-l border-zinc-200 dark:border-zinc-800 flex flex-col bg-zinc-50/50 dark:bg-zinc-900/50 z-30 overflow-hidden relative ${isResizing ? '' : 'transition-[width] duration-300'}`}>
-        <div className="h-16 flex items-center px-6 justify-between border-b dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-shrink-0">
-          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2"><Tags size={12} /> World Notes</span>
+      {/* 右サイドバー: 設定ノート 改良版 */}
+      <aside style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }} className={`flex-shrink-0 border-l flex flex-col z-30 overflow-hidden relative transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'} ${isResizing ? '' : 'transition-[width] duration-300'}`}>
+        <div className={`h-16 flex items-center px-6 justify-between border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+          <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}><Tags size={12} /> World Notes</span>
           <button onClick={() => { if(!db) return; setNotes([...notes, { id: generateId('cat'), title: '新しいカテゴリ', colorId: 'amber', isOpen: true, order: Date.now(), children: [] }]); triggerSave(); }} className="text-indigo-500 hover:scale-110 transition-transform"><FolderPlus size={18} /></button>
         </div>
-        <div id="notes-sidebar" className="flex-1 overflow-y-auto p-5 space-y-6 custom-scroll">
+        
+        <div id="notes-sidebar" className="flex-1 overflow-y-auto p-4 space-y-8 custom-scroll pb-[60vh]">
           {notes.map((cat) => (
-            <div key={cat.id} className="space-y-3">
-              {/* カテゴリーカード: タイトル行にカラーボタンを統合 */}
-              <div className="group p-3 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border dark:border-zinc-800 space-y-3 relative">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateNoteLocal(cat.id, { isOpen: !cat.isOpen })} className="text-zinc-400">
-                    {cat.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <div key={cat.id} className={`rounded-[2rem] border transition-all overflow-hidden ${isDarkMode ? 'bg-zinc-950/40 border-zinc-800' : 'bg-zinc-100/50 border-zinc-200'}`}>
+              
+              <div className="group p-4 bg-white/40 dark:bg-zinc-900/40 flex items-center gap-3 border-b dark:border-zinc-800">
+                <button onClick={() => updateNoteLocal(cat.id, { isOpen: !cat.isOpen })} className="text-zinc-400">
+                  {cat.isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
+
+                <div className="relative inline-block flex-shrink-0">
+                  <button onClick={() => setOpenColorPickerId(openColorPickerId === cat.id ? null : cat.id)} className={`w-5 h-5 rounded-full ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'} ring-2 ring-offset-2 ring-transparent hover:ring-zinc-400 dark:ring-offset-zinc-900 transition-all flex items-center justify-center`} title="色を変更">
+                    <Palette size={10} className="text-white opacity-40" />
                   </button>
+                  {openColorPickerId === cat.id && (
+                    <div className={`absolute top-full left-0 mt-2 p-2 border rounded-2xl shadow-2xl z-[60] flex gap-2 animate-in fade-in slide-in-from-top-1 ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'}`}>
+                      {HIGHLIGHT_COLORS.map(color => (
+                        <button key={color.id} onClick={() => { updateNoteLocal(cat.id, { colorId: color.id }); setOpenColorPickerId(null); }} className={`w-6 h-6 rounded-full transition-all ${color.dot} ${cat.colorId === color.id ? 'ring-2 ring-indigo-400 scale-110 shadow-lg' : 'opacity-60 hover:opacity-100'}`} />
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                  {/* パレットボタンをタイトル行に移動 */}
-                  <div className="relative inline-block flex-shrink-0">
-                    <button 
-                      onClick={() => setOpenColorPickerId(openColorPickerId === cat.id ? null : cat.id)}
-                      className={`w-4 h-4 rounded-full ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'} ring-2 ring-offset-2 ring-transparent hover:ring-zinc-300 dark:ring-offset-zinc-900 transition-all flex items-center justify-center`}
-                      title="色を変更"
-                    >
-                      <Palette size={8} className="text-white opacity-40" />
-                    </button>
-                    
-                    {openColorPickerId === cat.id && (
-                      <div className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-xl z-[60] flex gap-1.5 animate-in fade-in slide-in-from-top-1">
-                        {HIGHLIGHT_COLORS.map(color => (
-                          <button 
-                            key={color.id} 
-                            onClick={() => { updateNoteLocal(cat.id, { colorId: color.id }); setOpenColorPickerId(null); }}
-                            className={`w-5 h-5 rounded-full transition-all ${color.dot} ${cat.colorId === color.id ? 'ring-2 ring-indigo-400 scale-110' : 'opacity-60 hover:opacity-100'}`}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <input className="flex-1 bg-transparent border-none text-[11px] font-black uppercase tracking-widest p-0 focus:ring-0 truncate opacity-60" value={cat.title || ''} onChange={e => updateNoteLocal(cat.id, { title: e.target.value })} placeholder="Category Name..." />
-                  
-                  {/* アクションボタン */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={e => { e.stopPropagation(); updateNoteLocal(cat.id, { children: [...(cat.children || []), { id: generateId('nt'), name: '新項目', description: '', order: Date.now() }], isOpen: true }); }} className="p-1 text-indigo-500 hover:scale-110">
-                      <Plus size={14} />
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); setDeleteTarget({ id: cat.id, title: cat.title, type: 'category' }); }} className="p-1 text-zinc-400 hover:text-red-500">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                <input className={`flex-1 bg-transparent border-none text-[13px] font-black uppercase tracking-[0.1em] p-0 focus:ring-0 truncate ${isDarkMode ? 'text-zinc-200' : 'text-zinc-800'}`} value={cat.title || ''} onChange={e => updateNoteLocal(cat.id, { title: e.target.value })} placeholder="Category Name..." />
+                
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={e => { e.stopPropagation(); updateNoteLocal(cat.id, { children: [...(cat.children || []), { id: generateId('nt'), name: '新項目', description: '', order: Date.now() }], isOpen: true }); }} className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-lg"><Plus size={16} /></button>
+                  <button onClick={e => { e.stopPropagation(); setDeleteTarget({ id: cat.id, title: cat.title, type: 'category' }); }} className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg"><Trash2 size={16} /></button>
                 </div>
               </div>
 
-              {cat.isOpen && cat.children && (
-                <div className="space-y-3 pl-2">
-                  {cat.children.map((n) => (
-                    <div key={n.id} id={`note-${n.id}`} onClick={() => setActiveNoteId(n.id)} className={`p-5 rounded-[1.5rem] border transition-all cursor-pointer relative overflow-hidden ${activeNoteId === n.id ? 'bg-white dark:bg-zinc-900/60 border-indigo-400 shadow-2xl ring-1 ring-indigo-400 scale-[1.03]' : 'bg-white/40 dark:bg-zinc-900/40 border-transparent hover:border-zinc-200 dark:hover:border-zinc-700'}`}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={`w-2 h-2 rounded-full ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
-                        <input className="flex-1 bg-transparent border-none text-xs font-black focus:ring-0 p-0" value={n.name || ''} onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, name: e.target.value } : c) })} onClick={e => e.stopPropagation()} placeholder="Entry Name..." />
-                        <button onClick={e => { e.stopPropagation(); updateNoteLocal(cat.id, { children: cat.children.filter(c => c.id !== n.id) }); }} className="text-zinc-300 hover:text-red-500 transition-colors"><X size={14} /></button>
+              {cat.isOpen && (
+                <div className="p-4 space-y-4">
+                  {cat.children && cat.children.length > 0 ? cat.children.map((n) => (
+                    <div 
+                      key={n.id} 
+                      id={`note-${n.id}`} 
+                      onClick={() => setActiveNoteId(n.id)} 
+                      className={`p-5 rounded-[1.5rem] border shadow-sm transition-all cursor-pointer relative ${activeNoteId === n.id ? (isDarkMode ? 'bg-zinc-800 border-indigo-500 shadow-xl ring-1 ring-indigo-500 scale-[1.02]' : 'bg-white border-indigo-400 shadow-xl ring-1 ring-indigo-400 scale-[1.02]') : (isDarkMode ? 'bg-zinc-900 border-transparent hover:border-zinc-700' : 'bg-white border-transparent hover:border-zinc-200 hover:shadow-md')}`}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-3 h-3 rounded-full shadow-sm ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
+                        <input className={`flex-1 bg-transparent border-none text-sm font-black focus:ring-0 p-0 ${isDarkMode ? 'text-zinc-100' : 'text-stone-900'}`} value={n.name || ''} onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, name: e.target.value } : c) })} onClick={e => e.stopPropagation()} placeholder="Entry Name..." />
+                        <button onClick={e => { e.stopPropagation(); updateNoteLocal(cat.id, { children: cat.children.filter(c => c.id !== n.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors"><X size={16} /></button>
                       </div>
-                      <textarea className="w-full bg-transparent border-none text-[11px] text-zinc-500 dark:text-zinc-400 focus:ring-0 p-0 resize-none h-16 leading-relaxed overflow-hidden placeholder-zinc-300" value={n.description || ''} onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, description: e.target.value } : c) })} onClick={e => e.stopPropagation()} placeholder="Quick notes..." />
+                      
+                      {/* 改良版 自動高さ調整 textarea コンポーネントを使用 */}
+                      <AutoResizeNoteTextarea 
+                        value={n.description || ''} 
+                        isDarkMode={isDarkMode}
+                        placeholder="Write details here..." 
+                        onChange={e => {
+                          updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, description: e.target.value } : c) });
+                        }}
+                      />
                     </div>
-                  ))}
+                  )) : (
+                    <div className="py-8 text-center opacity-20"><Plus size={24} className="mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">No entries yet</p></div>
+                  )}
                 </div>
               )}
             </div>
