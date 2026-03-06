@@ -448,6 +448,20 @@ export default function App() {
     }
   };
 
+  // 選択されたノートの要素まで自動スクロールする処理
+  useEffect(() => {
+    if (activeNoteId && rightPanelOpen) {
+      // カテゴリが閉じていた場合に開くのを待つため、わずかに遅延させる
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`note-${activeNoteId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeNoteId, rightPanelOpen]);
+
   const startResizingLeft = useCallback((e) => {
     e.preventDefault(); setIsResizing(true);
     const startX = e.clientX, startWidth = leftWidth;
