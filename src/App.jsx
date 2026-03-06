@@ -185,14 +185,15 @@ export default function App() {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
         }
+        // ここにあった else { await signInAnonymously(auth); } を削除し、
+        // ユーザーがボタンを押すまで自動でゲストログインしないように修正しました。
       } catch (e) {
         console.error("Fictelier: Auth init failed", e.message);
       }
     };
     initAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
