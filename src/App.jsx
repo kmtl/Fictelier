@@ -90,9 +90,7 @@ const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode }) =>
     }
   };
 
-  // 値が変わったとき、またはマウントされたときにリサイズを実行
   useEffect(() => {
-    // 少し待機してDOMの描画を確実に待つ
     const timer = setTimeout(resize, 0);
     return () => clearTimeout(timer);
   }, [value]);
@@ -173,6 +171,8 @@ export default function App() {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
         }
       } catch (e) {
         console.error("Fictelier: Auth init failed", e.message);
@@ -278,7 +278,8 @@ export default function App() {
       const data = list.find(it => it.id === rootId);
       if (data) {
         await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, colName, rootId), data, { merge: true });
-        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { updatedAt: Date.now() });
+        // updateDoc ではなく setDoc ({ merge: true }) を使うことで、親プロジェクトが存在しない場合のエラーを回避
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { updatedAt: Date.now() }, { merge: true });
       }
       setSaveStatus('saved');
     } catch (err) { setSaveStatus('dirty'); }
@@ -286,6 +287,7 @@ export default function App() {
 
   const triggerSave = useCallback((rootId, type = 'item') => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    if (!rootId) return; // IDがない場合は早期リターン
     setSaveStatus('dirty');
     saveTimeoutRef.current = setTimeout(() => saveRootDoc(rootId, type), AUTO_SAVE_DEBOUNCE_MS);
   }, [saveRootDoc]);
@@ -375,11 +377,20 @@ export default function App() {
         if (parent) {
           const updatedChildren = parent.children.filter(c => c.id !== id);
           setItems(prev => prev.map(it => it.id === parentId ? { ...it, children: updatedChildren } : it));
-          await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, parentId), { children: updatedChildren });
+          // updateDoc ではなく setDoc ({ merge: true }) を使って堅牢性を向上
+          await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_items_${activeProjectId}`, parentId), { children: updatedChildren }, { merge: true });
         }
       } else if (type === 'category') {
         setNotes(prev => prev.filter(it => it.id !== id));
         await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_notes_${activeProjectId}`, id));
+      } else if (type === 'note' && parentId) {
+        const cat = notes.find(c => c.id === parentId);
+        if (cat) {
+          const updatedChildren = cat.children.filter(c => c.id !== id);
+          setNotes(prev => prev.map(c => c.id === parentId ? { ...c, children: updatedChildren } : c));
+          // FirebaseError: No document to update 回避のため setDoc に変更
+          await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, `fictelier_notes_${activeProjectId}`, parentId), { children: updatedChildren }, { merge: true });
+        }
       }
       if (activeId === id) setActiveId(null);
       setSaveStatus('saved');
@@ -452,7 +463,7 @@ export default function App() {
   if (loading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-600 gap-6">
       <Loader2 className="animate-spin" size={40} />
-      <p className="text-[10px] font-black tracking-widest uppercase opacity-50">Entering Fictelier...</p>
+      <p className="text-[10px] font-black tracking-widest uppercase opacity-50">Entering Fictelier v1.2...</p>
     </div>
   );
 
@@ -527,7 +538,7 @@ export default function App() {
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'}`}>
       {deleteTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`rounded-3xl p-8 max-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
+          <div className={`rounded-3xl p-8 max-w-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
             <div className="flex flex-col items-center text-center space-y-4">
               <div className={`p-4 rounded-full ${isDarkMode ? 'bg-red-950/30 text-red-400' : 'bg-red-50 text-red-500'}`}><AlertCircle size={32} /></div>
               <div className="space-y-2"><h3 className="text-lg font-black tracking-tight">項目を削除しますか？</h3><p className={`text-xs leading-relaxed ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>「{deleteTarget.title}」を削除します。</p></div>
@@ -628,7 +639,13 @@ export default function App() {
       <aside style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }} className={`flex-shrink-0 border-l flex flex-col z-30 overflow-hidden relative transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'} ${isResizing ? '' : 'transition-[width] duration-300'}`}>
         <div className={`h-16 flex items-center px-6 justify-between border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200'}`}>
           <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}><Tags size={12} /> World Notes</span>
-          <button onClick={() => { if(!db) return; setNotes([...notes, { id: generateId('cat'), title: '新しいカテゴリ', colorId: 'amber', isOpen: true, order: Date.now(), children: [] }]); triggerSave(); }} className="text-indigo-500 hover:scale-110 transition-transform"><FolderPlus size={18} /></button>
+          <button onClick={() => { 
+            if(!db) return; 
+            const newId = generateId('cat');
+            const newCat = { id: newId, title: '新しいカテゴリ', colorId: 'amber', isOpen: true, order: Date.now(), children: [] };
+            setNotes([...notes, newCat]); 
+            triggerSave(newId, 'note'); // IDを渡して即時保存を促す
+          }} className="text-indigo-500 hover:scale-110 transition-transform"><FolderPlus size={18} /></button>
         </div>
         
         <div id="notes-sidebar" className="flex-1 overflow-y-auto p-4 space-y-8 custom-scroll pb-[60vh]">
@@ -673,7 +690,7 @@ export default function App() {
                       <div className="flex items-center gap-3 mb-4">
                         <div className={`w-3 h-3 rounded-full shadow-sm ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
                         <input className={`flex-1 bg-transparent border-none text-sm font-black focus:ring-0 p-0 ${isDarkMode ? 'text-zinc-100' : 'text-stone-900'}`} value={n.name || ''} onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, name: e.target.value } : c) })} onClick={e => e.stopPropagation()} placeholder="Entry Name..." />
-                        <button onClick={e => { e.stopPropagation(); updateNoteLocal(cat.id, { children: cat.children.filter(c => c.id !== n.id) }); }} className="text-zinc-400 hover:text-red-500 transition-colors"><X size={16} /></button>
+                        <button onClick={e => { e.stopPropagation(); setDeleteTarget({ id: n.id, title: n.name, type: 'note', parentId: cat.id }); }} className="text-zinc-400 hover:text-red-500 transition-colors"><X size={16} /></button>
                       </div>
                       
                       {/* 改良版 自動高さ調整 textarea コンポーネントを使用 */}
