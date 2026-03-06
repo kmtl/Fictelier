@@ -502,7 +502,7 @@ export default function App() {
           <button onClick={() => setErrorMessage(null)} className="ml-2 hover:opacity-70"><X size={16} /></button>
         </div>
       )}
-      <div className="flex flex-col items-center gap-8 max-sm w-full px-8 text-center">
+      <div className="flex flex-col items-center gap-8 max-w-sm w-full px-8 text-center">
         <div className="space-y-4">
           <FictelierLogo size={80} className="text-indigo-500 mx-auto" />
           <h1 className="text-5xl font-black italic tracking-tighter">Fictelier</h1>
