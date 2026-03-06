@@ -82,18 +82,32 @@ const generateId = (prefix = 'id') => `${prefix}-${Math.random().toString(36).su
 const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode }) => {
   const textareaRef = useRef(null);
 
-  const resize = () => {
+  const resize = useCallback(() => {
     const node = textareaRef.current;
     if (node) {
       node.style.height = 'auto';
       node.style.height = node.scrollHeight + 'px';
     }
-  };
+  }, []);
 
+  // 値の変更によるリサイズ
   useEffect(() => {
     const timer = setTimeout(resize, 0);
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [value, resize]);
+
+  // 要素の幅の変化（サイドバーの伸縮など）を検知してリサイズ
+  useEffect(() => {
+    const node = textareaRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver(() => {
+      resize();
+    });
+    
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [resize]);
 
   return (
     <textarea
@@ -538,7 +552,7 @@ export default function App() {
     <div className={`flex h-screen w-full transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'}`}>
       {deleteTarget && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`rounded-3xl p-8 max-w-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
+          <div className={`rounded-3xl p-8 max-sm w-full shadow-2xl border scale-in-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-100'}`}>
             <div className="flex flex-col items-center text-center space-y-4">
               <div className={`p-4 rounded-full ${isDarkMode ? 'bg-red-950/30 text-red-400' : 'bg-red-50 text-red-500'}`}><AlertCircle size={32} /></div>
               <div className="space-y-2"><h3 className="text-lg font-black tracking-tight">項目を削除しますか？</h3><p className={`text-xs leading-relaxed ${isDarkMode ? 'text-zinc-400' : 'text-zinc-500'}`}>「{deleteTarget.title}」を削除します。</p></div>
