@@ -448,6 +448,20 @@ export default function App() {
     }
   };
 
+  const scrollToHeading = useCallback((headingText) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const targetStr = `# ${headingText}`;
+    const index = ta.value.indexOf(targetStr);
+    if (index !== -1) {
+      ta.focus();
+      ta.setSelectionRange(index, index);
+      // 自動スクロールを促すために一度ブラーして再フォーカス
+      ta.blur();
+      ta.focus();
+    }
+  }, []);
+
   // 選択されたノートの要素まで自動スクロールする処理
   useEffect(() => {
     if (activeNoteId && rightPanelOpen) {
@@ -606,13 +620,52 @@ export default function App() {
               </div>
               {ch.isOpen && ch.children && (
                 <div className={`ml-4 mt-1 border-l-2 pl-3 space-y-1 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-100'}`}>
-                  {ch.children.map((sc) => (
-                    <div key={sc.id} onClick={() => setActiveId(sc.id)} className={`flex items-center p-2 rounded-lg cursor-pointer group text-xs transition-all ${activeId === sc.id ? (isDarkMode ? 'bg-indigo-900/40 text-indigo-400 font-bold border-l-2 border-indigo-500' : 'bg-indigo-50 text-indigo-600 font-bold border-l-2 border-indigo-500') : (isDarkMode ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-zinc-100 text-zinc-500')}`}>
-                      <FileText size={12} className="mr-2 opacity-40" />
-                      <span className="flex-1 truncate">{sc.title}</span>
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: sc.id, title: sc.title, type: 'scene', parentId: ch.id }); }} className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                    </div>
-                  ))}
+                  {ch.children.map((sc) => {
+                    // 本文から「# 見出し」を動的に抽出
+                    const headings = [];
+                    if (sc.content) {
+                      const lines = sc.content.split('\n');
+                      lines.forEach(line => {
+                        if (line.startsWith('# ')) {
+                          headings.push(line.substring(2).trim());
+                        }
+                      });
+                    }
+
+                    return (
+                      <div key={sc.id} className="mb-1">
+                        <div onClick={() => setActiveId(sc.id)} className={`flex items-center p-2 rounded-lg cursor-pointer group text-xs transition-all ${activeId === sc.id ? (isDarkMode ? 'bg-indigo-900/40 text-indigo-400 font-bold border-l-2 border-indigo-500' : 'bg-indigo-50 text-indigo-600 font-bold border-l-2 border-indigo-500') : (isDarkMode ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-zinc-100 text-zinc-500')}`}>
+                          <FileText size={12} className="mr-2 opacity-40" />
+                          <span className="flex-1 truncate">{sc.title}</span>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: sc.id, title: sc.title, type: 'scene', parentId: ch.id }); }} className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
+                        </div>
+                        
+                        {/* 抽出した見出し（サブアウトライン）の表示 */}
+                        {headings.length > 0 && (
+                          <div className={`ml-4 mt-0.5 border-l pl-2 space-y-0.5 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+                            {headings.map((h, i) => (
+                              <div 
+                                key={i} 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (activeId !== sc.id) {
+                                    setActiveId(sc.id);
+                                    setTimeout(() => scrollToHeading(h), 100);
+                                  } else {
+                                    scrollToHeading(h);
+                                  }
+                                }}
+                                className={`text-[10px] truncate flex items-center gap-1.5 py-0.5 cursor-pointer transition-colors ${isDarkMode ? 'text-zinc-500 hover:text-indigo-400' : 'text-zinc-400 hover:text-indigo-500'}`}
+                              >
+                                <span className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-zinc-700' : 'bg-zinc-300'}`}></span>
+                                {h}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
