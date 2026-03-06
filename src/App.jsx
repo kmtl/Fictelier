@@ -143,7 +143,18 @@ const FictelierLogo = ({ size = 24, className = "" }) => (
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // ダークモードの初期値を localStorage または OS の設定から取得
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('fictelier_theme');
+      if (saved !== null) return saved === 'dark';
+      // 保存された設定がない場合は、OSのダークモード設定を参照
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+  
   const [view, setView] = useState('project_list'); 
   const [projects, setProjects] = useState([]);
   const [activeProjectId, setActiveProjectId] = useState(null);
@@ -173,8 +184,22 @@ export default function App() {
   const backdropRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // ダークモードが切り替わるたびに localStorage に保存
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('fictelier_theme', isDarkMode ? 'dark' : 'light');
+    }
+  }, [isDarkMode]);
+
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { notesRef.current = notes; }, [notes]);
+
+  // isDarkMode が変更されたら localStorage に保存
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fictelier_theme', isDarkMode ? 'dark' : 'light');
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (!auth) {
