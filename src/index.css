@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@config "../tailwind.config.js"; /* これがないと App.jsx のクラスが認識されません */
-
 @layer base {
   .font-serif {
     font-family: 'Noto Serif JP', serif;
