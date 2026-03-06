@@ -194,13 +194,6 @@ export default function App() {
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { notesRef.current = notes; }, [notes]);
 
-  // isDarkMode が変更されたら localStorage に保存
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('fictelier_theme', isDarkMode ? 'dark' : 'light');
-    }
-  }, [isDarkMode]);
-
   useEffect(() => {
     if (!auth) {
       setLoading(false);
@@ -823,7 +816,6 @@ export default function App() {
       {isResizing && <div className="fixed inset-0 z-[9999] cursor-col-resize" />}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
         .font-serif { font-family: 'Noto Serif JP', serif; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #8882; border-radius: 10px; }
