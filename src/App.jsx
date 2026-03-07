@@ -76,6 +76,8 @@ const HIGHLIGHT_COLORS = [
 
 const generateId = (prefix = 'id') => `${prefix}-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
 
+const FONT_SIZES = { small: 'text-lg', medium: 'text-xl', large: 'text-2xl' };
+
 // --------------------------------------------------------
 // [サブコンポーネント: 自動リサイズするテキストエリア]
 // --------------------------------------------------------
@@ -176,6 +178,13 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [authProcessing, setAuthProcessing] = useState(false);
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('fictelier_fontSize');
+      return saved || 'medium';
+    }
+    return 'medium';
+  });
 
   const saveTimeoutRef = useRef(null);
   const deletingIdsRef = useRef(new Set()); 
@@ -190,6 +199,13 @@ export default function App() {
       window.localStorage.setItem('fictelier_theme', isDarkMode ? 'dark' : 'light');
     }
   }, [isDarkMode]);
+
+  // フォントサイズが切り替わるたびに localStorage に保存
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('fictelier_fontSize', fontSize);
+    }
+  }, [fontSize]);
 
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { notesRef.current = notes; }, [notes]);
@@ -711,6 +727,9 @@ export default function App() {
               {saveStatus === 'saving' && <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-indigo-950/10 text-indigo-500 border-indigo-900/20' : 'bg-indigo-50/50 text-indigo-500 border-indigo-100/50'}`}><Loader2 size={12} className="animate-spin" /> Saving</div>}
             </div>
             <div className={`flex items-center gap-2 pl-4 border-l ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+              {['small', 'medium', 'large'].map(size => (
+                <button key={size} onClick={() => setFontSize(size)} className={`p-1 px-2 rounded text-xs font-bold uppercase tracking-widest transition-all ${fontSize === size ? 'bg-indigo-500 text-white' : isDarkMode ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>{size.charAt(0).toUpperCase()}</button>
+              ))}
               <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-xl transition-all ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'}`}>{isDarkMode ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}</button>
               <button onClick={() => setRightPanelOpen(!rightPanelOpen)} className={`p-2 rounded-xl transition-all ${rightPanelOpen ? "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/40" : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}>{rightPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}</button>
             </div>
@@ -720,11 +739,11 @@ export default function App() {
           {!dataLoaded && activeProjectId ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-zinc-400"><Loader2 className="animate-spin" size={32} /><p className="text-xs font-bold uppercase tracking-widest">Loading Manuscript...</p></div>
           ) : activeItem ? (
-            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-12rem)] rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
-              <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className="w-full text-5xl font-black bg-transparent border-none outline-none focus:ring-0 mb-12 tracking-tighter italic placeholder:opacity-20" placeholder="Title..." />
+            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-8rem)] rounded-sm flex flex-col pt-4 pb-4 px-8 md:pt-8 md:pb-8 md:px-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
+              <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className={`w-full text-3xl font-black border-none outline-none focus:ring-0 mb-2 py-1 px-2 rounded tracking-tighter italic placeholder:opacity-20 ${isDarkMode ? 'bg-zinc-800/30' : 'bg-zinc-100/60'}`} placeholder="Title..." />
               <div className="relative flex-1">
-                <div ref={backdropRef} className="absolute inset-0 p-0 text-xl leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden" dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 text-xl leading-[2.2] font-serif resize-none p-0 placeholder:opacity-20 ${isDarkMode ? 'caret-white text-zinc-100' : 'caret-black text-stone-900'}`} spellCheck="false" placeholder="Once upon a time..." />
+                <div ref={backdropRef} className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
+                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:opacity-20 ${isDarkMode ? 'caret-white text-zinc-100' : 'caret-black text-stone-900'}`} spellCheck="false" placeholder="Once upon a time..." />
               </div>
             </div>
           ) : (
