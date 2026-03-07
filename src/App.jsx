@@ -15,8 +15,11 @@ import {
   Plus, ChevronRight, ChevronDown, FileText, Trash2, Moon, Sun, Tags, X,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderPlus,
   CheckCircle2, Loader2, LogOut, AlertCircle, Book, ChevronLeft, Clock, Type, Sparkles,
-  LogIn, RefreshCw, Palette
+  LogIn, RefreshCw, Palette, Download
 } from 'lucide-react';
+
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 // ========================================================
 // [Firebase 堅牢な初期化ロジック - v1.0準拠]
@@ -185,6 +188,12 @@ export default function App() {
     }
     return 'medium';
   });
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportOptions, setExportOptions] = useState({
+    includeSubOutlines: false,
+    includeNotes: true,
+    includeColors: false,
+  });
 
   const saveTimeoutRef = useRef(null);
   const deletingIdsRef = useRef(new Set()); 
@@ -206,6 +215,63 @@ export default function App() {
       window.localStorage.setItem('fictelier_fontSize', fontSize);
     }
   }, [fontSize]);
+
+  const exportProject = useCallback(async () => {
+    if (!activeProjectId || items.length === 0) {
+      setErrorMessage('エクスポートするプロジェクトがありません。');
+      return;
+    }
+
+    const zip = new JSZip();
+    const projectName = projects.find(p => p.id === activeProjectId)?.title || 'Project';
+
+    // 各章を処理
+    let sceneNumber = 1;
+    items.forEach((chapter, chapterIndex) => {
+      // 各シーン（話）を処理
+      if (chapter.children && chapter.children.length > 0) {
+        chapter.children.forEach((scene, sceneIndex) => {
+          let content = scene.content;
+          if (!exportOptions.includeSubOutlines) {
+            content = content.split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
+          }
+          // 1行目に章タイトル、その後に話本文
+          const txtContent = `【${chapter.title}】\n\n${scene.title}\n\n${content}`;
+          const paddedNumber = String(sceneNumber).padStart(3, '0');
+          zip.file(`${paddedNumber}_${scene.title || `Scene${sceneIndex + 1}`}.txt`, txtContent);
+          sceneNumber++;
+        });
+      }
+    });
+
+    // 設定ノートをMDとして追加
+    if (exportOptions.includeNotes && notes.length > 0) {
+      let mdContent = '';
+      notes.forEach(category => {
+        mdContent += `## ${category.title}\n`;
+        if (category.children && category.children.length > 0) {
+          category.children.forEach(child => {
+            mdContent += `- ${child.name || ''}`;
+            if (child.description) {
+              mdContent += `\n  ${child.description}`;
+            }
+            if (exportOptions.includeColors) {
+              mdContent += ` [${category.colorId}]`;
+            }
+            mdContent += '\n';
+          });
+        }
+        mdContent += '\n';
+      });
+      zip.file('notes.md', mdContent);
+    }
+
+    // ZIP生成とダウンロード
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    saveAs(zipBlob, `${projectName}.zip`);
+    setShowExportModal(false);
+    setErrorMessage(null);
+  }, [activeProjectId, items, notes, projects, exportOptions]);
 
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { notesRef.current = notes; }, [notes]);
@@ -727,6 +793,7 @@ export default function App() {
               {saveStatus === 'saving' && <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-indigo-950/10 text-indigo-500 border-indigo-900/20' : 'bg-indigo-50/50 text-indigo-500 border-indigo-100/50'}`}><Loader2 size={12} className="animate-spin" /> Saving</div>}
             </div>
             <div className={`flex items-center gap-2 pl-4 border-l ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
+              <button onClick={() => setShowExportModal(true)} className={`p-2 rounded-xl transition-all ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-100'}`}><Download size={20} /></button>
               {['small', 'medium', 'large'].map(size => (
                 <button key={size} onClick={() => setFontSize(size)} className={`p-1 px-2 rounded text-xs font-bold uppercase tracking-widest transition-all ${fontSize === size ? 'bg-indigo-500 text-white' : isDarkMode ? 'text-zinc-400 hover:bg-zinc-800' : 'text-zinc-500 hover:bg-zinc-100'}`}>{size.charAt(0).toUpperCase()}</button>
               ))}
@@ -739,11 +806,50 @@ export default function App() {
           {!dataLoaded && activeProjectId ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-zinc-400"><Loader2 className="animate-spin" size={32} /><p className="text-xs font-bold uppercase tracking-widest">Loading Manuscript...</p></div>
           ) : activeItem ? (
-            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-8rem)] rounded-sm flex flex-col pt-4 pb-4 px-8 md:pt-8 md:pb-8 md:px-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
-              <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className={`w-full text-3xl font-black border-none outline-none focus:ring-0 mb-2 py-1 px-2 rounded tracking-tighter italic placeholder:opacity-20 ${isDarkMode ? 'bg-zinc-800/30' : 'bg-zinc-100/60'}`} placeholder="Title..." />
+            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-8rem)] rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
+              <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className="w-full text-3xl font-black bg-transparent border-none outline-none focus:ring-0 mb-6 tracking-tighter italic placeholder:opacity-20" placeholder="Title..." />
               <div className="relative flex-1">
-                <div ref={backdropRef} className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:opacity-20 ${isDarkMode ? 'caret-white text-zinc-100' : 'caret-black text-stone-900'}`} spellCheck="false" placeholder="Once upon a time..." />
+                {activeItem.children && activeItem.children.length > 0 ? (
+                  <div className={`p-6 space-y-8 ${FONT_SIZES[fontSize]} leading-relaxed`}>
+                    <div>
+                      <h2 className="text-xs font-black uppercase tracking-widest mb-4 opacity-70">全体</h2>
+                      <div className="space-y-2">
+                        <div className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                          所属話数: <span className="font-bold">{activeItem.children.length}話</span>
+                        </div>
+                        {(() => {
+                          const totalChars = activeItem.children.reduce((sum, child) => sum + (child.content?.length || 0), 0);
+                          const avgChars = Math.round(totalChars / activeItem.children.length);
+                          return (
+                            <>
+                              <div className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                                総文字数: <span className="font-bold">{totalChars.toLocaleString()}文字</span>
+                              </div>
+                              <div className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                                平均文字数: <span className="font-bold">{avgChars.toLocaleString()}文字/話</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-black uppercase tracking-widest mb-4 opacity-70">各話タイトル</h2>
+                      <div className="space-y-2">
+                        {activeItem.children.map((scene, idx) => (
+                          <div key={scene.id} className={`text-sm ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                            {String(idx + 1).padStart(3, '0')}__{scene.title || `Scene${idx + 1}`}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div ref={backdropRef} className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
+                    <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 text-transparent ${isDarkMode ? 'caret-white' : 'caret-black'} selection:text-current`} spellCheck="false" placeholder="Once upon a time..." />
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -833,6 +939,35 @@ export default function App() {
       </aside>
 
       {isResizing && <div className="fixed inset-0 z-[9999] cursor-col-resize" />}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowExportModal(false)}>
+          <div className={`p-6 rounded-xl shadow-xl max-w-md w-full mx-4 ${isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200'}`} onClick={e => e.stopPropagation()}>
+            <h3 className={`text-lg font-bold mb-4 ${isDarkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>プロジェクトをエクスポート</h3>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={exportOptions.includeSubOutlines} onChange={e => setExportOptions(prev => ({ ...prev, includeSubOutlines: e.target.checked }))} />
+                <span className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>サブアプトラインを含める (#ではじまる行)</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={exportOptions.includeNotes} onChange={e => setExportOptions(prev => ({ ...prev, includeNotes: e.target.checked }))} />
+                <span className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>設定ノートを含める (notes.md)</span>
+              </label>
+              {exportOptions.includeNotes && (
+                <label className="flex items-center gap-2 ml-4">
+                  <input type="checkbox" checked={exportOptions.includeColors} onChange={e => setExportOptions(prev => ({ ...prev, includeColors: e.target.checked }))} />
+                  <span className={`text-sm ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>色情報を含める</span>
+                </label>
+              )}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={exportProject} className="flex-1 bg-indigo-500 text-white py-2 px-4 rounded-lg font-bold hover:bg-indigo-600 transition-colors">エクスポート</button>
+              <button onClick={() => setShowExportModal(false)} className={`flex-1 py-2 px-4 rounded-lg font-bold transition-colors ${isDarkMode ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'}`}>キャンセル</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .font-serif { font-family: 'Noto Serif JP', serif; }
