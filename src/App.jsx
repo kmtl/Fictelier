@@ -847,7 +847,7 @@ export default function App() {
                 ) : (
                   <>
                     <div ref={backdropRef} className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                    <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 text-transparent ${isDarkMode ? 'caret-white' : 'caret-black'} selection:text-current`} spellCheck="false" placeholder="Once upon a time..." />
+                    <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'caret-white' : 'caret-black'} selection:text-current`} spellCheck="false" placeholder="Once upon a time..." />
                   </>
                 )}
               </div>
