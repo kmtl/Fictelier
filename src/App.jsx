@@ -538,7 +538,7 @@ export default function App() {
     }
   };
 
-  const handleTextareaClick = (e) => {
+  const handleTextareaClick = useCallback((e) => {
     const pos = e.target.selectionStart;
     const text = activeItem?.content || "";
     const matchedNote = allFlatNotes.find(n => {
@@ -556,7 +556,7 @@ export default function App() {
       const parent = notes.find(cat => cat.id === matchedNote.parentId);
       if (parent && !parent.isOpen) updateNoteLocal(parent.id, { isOpen: true });
     }
-  };
+  }, [activeItem?.content, allFlatNotes, notes]);
 
   const scrollToHeading = useCallback((headingText) => {
     const ta = textareaRef.current;
