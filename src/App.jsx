@@ -513,6 +513,16 @@ export default function App() {
   const getHighlights = (t) => {
     if (!t) return "";
     let h = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // ハッシュ先頭行に背景だけ付ける(色はインラインスタイルで指定)
+    const bgColor = isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(199,210,254,1)';
+    h = h.split('\n').map(line => {
+      if (line.startsWith('# ')) {
+        return `<span style="background:${bgColor};color:transparent;display:inline-block;width:100%">${line}</span>`;
+      }
+      return line;
+    }).join('\n');
+
     [...allFlatNotes].sort((a,b) => b.name.length - a.name.length).forEach(n => {
       if (!n.name) return;
       const colorCfg = HIGHLIGHT_COLORS.find(c => c.id === n.parentColorId) || HIGHLIGHT_COLORS[0];
@@ -847,7 +857,7 @@ export default function App() {
                 ) : (
                   <>
                     <div ref={backdropRef} className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content) }} />
-                    <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'caret-white' : 'caret-black'} selection:text-current`} spellCheck="false" placeholder="Once upon a time..." />
+                    <textarea ref={textareaRef} value={activeItem.content} onScroll={handleScroll} onClick={handleTextareaClick} onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'text-zinc-100 caret-white' : 'text-stone-900 caret-black'} selection:text-current`} spellCheck="false" placeholder="Once upon a time..." />
                   </>
                 )}
               </div>
