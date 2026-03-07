@@ -816,7 +816,7 @@ export default function App() {
           {!dataLoaded && activeProjectId ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-zinc-400"><Loader2 className="animate-spin" size={32} /><p className="text-xs font-bold uppercase tracking-widest">Loading Manuscript...</p></div>
           ) : activeItem ? (
-            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-8rem)] rounded-sm flex flex-col p-8 md:p-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
+            <div className={`max-w-4xl mx-auto min-h-[calc(100vh-8rem)] rounded-sm flex flex-col pt-4 pb-4 px-8 md:pt-8 md:pb-8 md:px-20 overflow-hidden my-8 border transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800 shadow-none' : 'bg-white border-zinc-200 shadow-xl shadow-zinc-200/50'}`}>
               <input type="text" value={activeItem.title} onChange={(e) => updateItemLocal(activeId, { title: e.target.value })} className="w-full text-3xl font-black bg-transparent border-none outline-none focus:ring-0 mb-6 tracking-tighter italic placeholder:opacity-20" placeholder="Title..." />
               <div className="relative flex-1">
                 {activeItem.children && activeItem.children.length > 0 ? (
