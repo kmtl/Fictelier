@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, forwardRef } from 'react';
+import React, { useRef, useEffect, forwardRef, useMemo } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { getHighlights } from '../utils/highlights';
 import { FONT_SIZES } from '../utils/constants';
+import { HIGHLIGHT_COLORS } from '../utils/constants';
 
 export const Editor = forwardRef((
   {
@@ -24,6 +24,75 @@ textareaRef
       backdropRef.current.scrollTop = e.target.scrollTop;
     }
   };
+
+  // テキストを解析してハイライト用の要素配列を生成する
+  const renderHighlightedContent = useMemo(() => {
+    if (!activeItem?.content) return null;
+    const text = activeItem.content;
+    
+    // 1. ハイライト対象の単語を長さ順（長い順）にソート
+    const sortedNotes = [...allFlatNotes]
+      .filter(n => n.name)
+      .sort((a, b) => b.name.length - a.name.length);
+
+    const keywordPattern = sortedNotes.length > 0
+      ? new RegExp(`(${sortedNotes.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
+      : null;
+
+    const lines = text.split('\n');
+
+    return lines.map((line, lineIndex, linesArr) => {
+      const isHeading = line.startsWith('# ');
+      const bgColor = isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(199,210,254,1)';
+
+      const renderLineContent = () => {
+        if (!keywordPattern) {
+          return line;
+        }
+
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+        keywordPattern.lastIndex = 0; // 正規表現の状態をリセット
+
+        while ((match = keywordPattern.exec(line)) !== null) {
+          // マッチしなかった部分を追加
+          if (match.index > lastIndex) {
+            parts.push(<span key={`${lineIndex}-text-${lastIndex}`}>{line.substring(lastIndex, match.index)}</span>);
+          }
+          // マッチした部分を追加
+          const matchedNote = sortedNotes.find(n => n.name === match[0]);
+          if (matchedNote) {
+            const colorCfg = HIGHLIGHT_COLORS.find(c => c.id === matchedNote.parentColorId) || HIGHLIGHT_COLORS[0];
+            parts.push(<span key={`${lineIndex}-highlight-${lastIndex}`} className={`${colorCfg.bg} ${colorCfg.border} border-b-2 text-transparent`}>{match[0]}</span>);
+          }
+          lastIndex = keywordPattern.lastIndex;
+        }
+
+        // 最後のマッチ以降のテキストを追加
+        if (lastIndex < line.length) {
+          parts.push(<span key={`${lineIndex}-text-${lastIndex}`}>{line.substring(lastIndex)}</span>);
+        }
+        return parts;
+      };
+
+      const lineContent = renderLineContent();
+
+      return (
+        <React.Fragment key={lineIndex}>
+          {isHeading ? (
+            <span style={{ background: bgColor, color: 'transparent', display: 'inline-block', width: '100%' }}>
+              {lineContent}
+            </span>
+          ) : (
+            lineContent
+          )}
+          {lineIndex < linesArr.length - 1 && <br />}
+        </React.Fragment>
+      );
+    });
+  }, [activeItem?.content, allFlatNotes, isDarkMode]);
+
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 z-10 shadow-2xl overflow-hidden relative font-serif transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-stone-900'}`}>
@@ -84,8 +153,9 @@ textareaRef
                   <div 
                     ref={backdropRef} 
                     className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} 
-                    dangerouslySetInnerHTML={{ __html: getHighlights(activeItem.content, allFlatNotes, isDarkMode) }} 
-                  />
+                  >
+                    {renderHighlightedContent}
+                  </div>
                   <textarea 
                     ref={textareaRef} 
                     value={activeItem.content} 
