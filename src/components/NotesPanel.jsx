@@ -64,9 +64,9 @@ export const NotesPanel = ({
       
       <div id="notes-sidebar" className="flex-1 overflow-y-auto p-4 space-y-8 custom-scroll pb-[60vh]">
         {notes.map((cat) => (
-          <div key={cat.id} className={`rounded-[2rem] border transition-all overflow-hidden ${isDarkMode ? 'bg-zinc-950/40 border-zinc-800' : 'bg-zinc-100/50 border-zinc-200'}`}>
+          <div key={cat.id} className={`rounded-2xl border transition-all overflow-hidden ${isDarkMode ? 'bg-zinc-950/40 border-zinc-800' : 'bg-white border-zinc-200'}`}>
             
-            <div className="group p-4 bg-white/40 dark:bg-zinc-900/40 flex items-center gap-3 border-b dark:border-zinc-800">
+            <div className={`group p-4 flex items-center gap-3 border-b ${isDarkMode ? 'bg-zinc-900/40 border-zinc-800' : 'border-zinc-200'}`}>
               <button 
                 onClick={() => updateNoteLocal(cat.id, { isOpen: !cat.isOpen })} 
                 className="text-zinc-400"
@@ -134,9 +134,9 @@ export const NotesPanel = ({
                     key={n.id} 
                     id={`note-${n.id}`} 
                     onClick={() => setActiveNoteId(n.id)} 
-                    className={`p-5 rounded-[1.5rem] border shadow-sm transition-all cursor-pointer relative ${activeNoteId === n.id ? (isDarkMode ? 'bg-zinc-800 border-indigo-500 shadow-xl ring-1 ring-indigo-500 scale-[1.02]' : 'bg-white border-indigo-400 shadow-xl ring-1 ring-indigo-400 scale-[1.02]') : (isDarkMode ? 'bg-zinc-900 border-transparent hover:border-zinc-700' : 'bg-white border-transparent hover:border-zinc-200 hover:shadow-md')}`}
+                    className={`p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative ${activeNoteId === n.id ? (isDarkMode ? 'bg-zinc-800 border-indigo-500 shadow-xl ring-1 ring-indigo-500 scale-[1.02]' : 'bg-white border-indigo-400 shadow-xl ring-1 ring-indigo-400 scale-[1.02]') : (isDarkMode ? 'bg-zinc-900 border-transparent hover:border-zinc-700' : 'bg-white border-transparent hover:border-zinc-200 hover:shadow-md')}`}
                   >
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
                       <div className={`w-3 h-3 rounded-full shadow-sm ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
                       <input 
                         className={`flex-1 bg-transparent border-none text-sm font-black focus:ring-0 p-0 ${isDarkMode ? 'text-zinc-100' : 'text-stone-900'}`} 
