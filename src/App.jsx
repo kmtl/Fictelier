@@ -31,7 +31,6 @@ import { FictelierLogo } from './icons/FictelierLogo';
 
 // ===== Hook Imports =====
 import { useAuth } from './hooks/useAuth';
-import { useFirestoreData } from './hooks/useFirestoreData';
 import { useUIState } from './hooks/useUIState';
 
 // ===== Utility Imports =====
@@ -84,17 +83,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // ダークモードの初期値を localStorage または OS の設定から取得
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem('fictelier_theme');
-      if (saved !== null) return saved === 'dark';
-      // 保存された設定がない場合は、OSのダークモード設定を参照
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
-  
   const [view, setView] = useState('project_list'); 
   const [projects, setProjects] = useState([]);
   const [activeProjectId, setActiveProjectId] = useState(null);
@@ -106,30 +94,24 @@ export default function App() {
   const [activeNoteId, setActiveNoteId] = useState(null);
   const [openColorPickerId, setOpenColorPickerId] = useState(null);
   
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [leftWidth, setLeftWidth] = useState(256);
-  const [rightWidth, setRightWidth] = useState(400); 
-  const [isResizing, setIsResizing] = useState(false);
-
   const [saveStatus, setSaveStatus] = useState('saved'); 
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [errorMessage, setErrorMessage] = useState(null);
   const [authProcessing, setAuthProcessing] = useState(false);
-  const [fontSize, setFontSize] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem('fictelier_fontSize');
-      return saved || 'medium';
-    }
-    return 'medium';
-  });
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportOptions, setExportOptions] = useState({
-    includeSubOutlines: false,
-    includeNotes: true,
-    includeColors: false,
-  });
-  const [pendingScrollToHeading, setPendingScrollToHeading] = useState(null);
+
+  const {
+    isDarkMode, setIsDarkMode,
+    leftSidebarOpen, setLeftSidebarOpen,
+    rightPanelOpen, setRightPanelOpen,
+    leftWidth,
+    rightWidth,
+    isResizing,
+    startResizingLeft, startResizingRight,
+    fontSize, setFontSize,
+    showExportModal, setShowExportModal,
+    exportOptions, setExportOptions,
+    errorMessage, setErrorMessage,
+    deleteTarget, setDeleteTarget,
+    pendingScrollToHeading, setPendingScrollToHeading
+  } = useUIState();
 
   const saveTimeoutRef = useRef(null);
   const deletingIdsRef = useRef(new Set()); 
@@ -137,20 +119,6 @@ export default function App() {
   const notesRef = useRef([]);
   const backdropRef = useRef(null);
   const textareaRef = useRef(null);
-
-  // ダークモードが切り替わるたびに localStorage に保存
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('fictelier_theme', isDarkMode ? 'dark' : 'light');
-    }
-  }, [isDarkMode]);
-
-  // フォントサイズが切り替わるたびに localStorage に保存
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('fictelier_fontSize', fontSize);
-    }
-  }, [fontSize]);
 
   const exportProject = useCallback(async () => {
     if (!activeProjectId || items.length === 0) {
@@ -543,28 +511,6 @@ export default function App() {
       setPendingScrollToHeading(null);
     }
   }, [activeId, pendingScrollToHeading, scrollToHeading]);
-
-  const startResizingLeft = useCallback((e) => {
-    e.preventDefault(); setIsResizing(true);
-    const startX = e.clientX, startWidth = leftWidth;
-    const move = (me) => {
-      const w = startWidth + (me.clientX - startX);
-      if (w > 160 && w < 480) setLeftWidth(w);
-    };
-    const up = () => { setIsResizing(false); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
-  }, [leftWidth]);
-
-  const startResizingRight = useCallback((e) => {
-    e.preventDefault(); setIsResizing(true);
-    const startX = e.clientX, startWidth = rightWidth;
-    const move = (me) => {
-      const w = startWidth - (me.clientX - startX);
-      if (w > 200 && w < 600) setRightWidth(w);
-    };
-    const up = () => { setIsResizing(false); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
-  }, [rightWidth]);
 
   if (loading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-600 gap-6">
