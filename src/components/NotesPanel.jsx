@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import { Tags, FolderPlus, ChevronDown, ChevronRight, Plus, Trash2, X, Palette } from 'lucide-react';
 import { HIGHLIGHT_COLORS, generateId } from '../utils/constants';
 
-const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode }) => {
+const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode, panelWidth }) => {
   const textareaRef = useRef(null);
 
   const resize = useCallback(() => {
@@ -16,7 +16,7 @@ const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode }) =>
   useEffect(() => {
     const timer = setTimeout(resize, 0);
     return () => clearTimeout(timer);
-  }, [value, resize]);
+  }, [value, panelWidth, resize]);
 
   useEffect(() => {
     window.addEventListener('resize', resize);
@@ -159,6 +159,7 @@ export const NotesPanel = ({
                     <AutoResizeNoteTextarea 
                       value={n.description || ''} 
                       isDarkMode={isDarkMode}
+                      panelWidth={rightWidth}
                       placeholder="Write details here..." 
                       onChange={e => {
                         updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, description: e.target.value } : c) });

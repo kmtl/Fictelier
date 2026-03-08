@@ -12,8 +12,26 @@ export const useUIState = () => {
 
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
-  const [leftWidth, setLeftWidth] = useState(256);
-  const [rightWidth, setRightWidth] = useState(400);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('fictelier_leftWidth');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val)) return Math.min(val, window.innerWidth * 0.4);
+      }
+    }
+    return 256;
+  });
+  const [rightWidth, setRightWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('fictelier_rightWidth');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val)) return Math.min(val, window.innerWidth * 0.4);
+      }
+    }
+    return 400;
+  });
   const [isResizing, setIsResizing] = useState(false);
 
   const [fontSize, setFontSize] = useState(() => {
@@ -48,6 +66,18 @@ export const useUIState = () => {
       window.localStorage.setItem('fictelier_fontSize', fontSize);
     }
   }, [fontSize]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('fictelier_leftWidth', leftWidth);
+    }
+  }, [leftWidth]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('fictelier_rightWidth', rightWidth);
+    }
+  }, [rightWidth]);
 
   // リサイズ処理ロジック
   const startResizingLeft = useCallback((e) => {
