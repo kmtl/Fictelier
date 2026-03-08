@@ -25,8 +25,8 @@ export const Header = ({
           {leftSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
         </button>
         <div className="flex items-center min-w-0">
-          <span className="text-sm font-black italic tracking-tighter flex items-center gap-1.5 truncate pr-2">
-            <FictelierLogo size={16} className="text-indigo-500" /> Fictelier
+          <span className="text-xl font-black italic tracking-tighter flex items-center gap-1.5 truncate pr-2">
+            <FictelierLogo size={24} className="text-indigo-500" /> Fictelier
           </span>
         </div>
       </div>
