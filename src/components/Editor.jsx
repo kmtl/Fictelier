@@ -93,6 +93,31 @@ textareaRef
     });
   }, [activeItem?.content, allFlatNotes, isDarkMode]);
 
+  // ネイティブイベントレベルで親への伝播を強力に阻止する
+  useEffect(() => {
+    // ref経由で取得できない場合（親からrefが渡されていない場合など）に備えてIDでも取得を試みる
+    const textarea = (textareaRef && typeof textareaRef === 'object' && textareaRef.current) 
+      ? textareaRef.current 
+      : document.getElementById('main-editor-textarea');
+
+    if (!textarea) return;
+
+    const stopPropagation = (e) => {
+      e.stopPropagation();
+    };
+
+    // 親要素のドラッグイベント等との競合を避けるため、
+    // テキストエリアでドラッグ操作の起点となるイベントのみ伝播を止める。
+    // mousemoveなどを止めるとブラウザ標準のテキスト選択が機能しなくなるため、これらは止めない。
+    const events = [
+      'mousedown', 'pointerdown', 'touchstart', 'dragstart'
+    ];
+    events.forEach(event => textarea.addEventListener(event, stopPropagation));
+
+    return () => {
+      events.forEach(event => textarea.removeEventListener(event, stopPropagation));
+    };
+  }, [textareaRef, activeId, activeItem]); // 画面切り替え時にも再実行されるように依存配列を追加
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 z-10 shadow-2xl overflow-hidden relative font-serif transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-stone-900'}`}>
@@ -112,7 +137,7 @@ textareaRef
               placeholder="Title..." 
             />
             
-            <div className="relative flex-1">
+            <div className="relative flex-1 isolate">
               {activeItem.children && activeItem.children.length > 0 ? (
                 <div className={`p-6 space-y-8 ${FONT_SIZES[fontSize]} leading-relaxed`}>
                   <div>
@@ -152,17 +177,20 @@ textareaRef
                 <>
                   <div 
                     ref={backdropRef} 
-                    className={`absolute inset-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} 
+                    className={`absolute inset-0 z-0 p-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif pointer-events-none whitespace-pre-wrap break-words text-transparent overflow-hidden`} 
                   >
                     {renderHighlightedContent}
                   </div>
                   <textarea 
+                    id="main-editor-textarea"
                     ref={textareaRef} 
                     value={activeItem.content} 
-                    onScroll={handleScroll} 
-                    onClick={onTextareaClick} 
+                    onScroll={handleScroll}
+                    onClick={(e) => { e.stopPropagation(); onTextareaClick && onTextareaClick(e); }}
                     onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} 
-                    className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'text-zinc-100 caret-white' : 'text-stone-900 caret-black'} selection:text-current`} 
+                    draggable="false"
+                    style={{ userSelect: 'text', WebkitUserSelect: 'text', pointerEvents: 'auto' }}
+                    className={`absolute inset-0 w-full h-full z-10 bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'text-zinc-100 caret-white selection:bg-indigo-500/50 selection:text-white' : 'text-stone-900 caret-black selection:bg-indigo-200 selection:text-indigo-900'} select-text cursor-text pointer-events-auto`} 
                     spellCheck="false" 
                     placeholder="Once upon a time..." 
                   />
