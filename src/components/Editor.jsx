@@ -21,27 +21,41 @@ textareaRef
 
   const handleScroll = (e) => {
     if (backdropRef.current) {
-      backdropRef.current.scrollTop = e.target.scrollTop;
+      const target = e.target;
+      // 描画タイミングに合わせて同期させることで、スクロール時の微細なズレを軽減
+      requestAnimationFrame(() => {
+        if (backdropRef.current) backdropRef.current.scrollTop = target.scrollTop;
+      });
     }
   };
+
+  // パフォーマンス改善: ハイライト用の正規表現と検索マップの生成をテキスト更新から分離
+  // これにより、文字入力のたびに重い正規表現生成やソート処理が走るのを防ぐ
+  const { keywordPattern, notesMap } = useMemo(() => {
+    const validNotes = allFlatNotes.filter(n => n.name);
+    
+    // 長い順にソート（正規表現のマッチング順序用）
+    const sortedNotes = [...validNotes].sort((a, b) => b.name.length - a.name.length);
+    
+    const pattern = sortedNotes.length > 0
+      ? new RegExp(`(${sortedNotes.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
+      : null;
+
+    // 高速検索用のMap作成
+    const map = new Map();
+    validNotes.forEach(n => map.set(n.name, n));
+
+    return { keywordPattern: pattern, notesMap: map };
+  }, [allFlatNotes]);
 
   // テキストを解析してハイライト用の要素配列を生成する
   const renderHighlightedContent = useMemo(() => {
     if (!activeItem?.content) return null;
     const text = activeItem.content;
-    
-    // 1. ハイライト対象の単語を長さ順（長い順）にソート
-    const sortedNotes = [...allFlatNotes]
-      .filter(n => n.name)
-      .sort((a, b) => b.name.length - a.name.length);
-
-    const keywordPattern = sortedNotes.length > 0
-      ? new RegExp(`(${sortedNotes.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
-      : null;
 
     const lines = text.split('\n');
 
-    return lines.map((line, lineIndex, linesArr) => {
+    const renderedLines = lines.map((line, lineIndex, linesArr) => {
       const isHeading = line.startsWith('# ');
       const bgColor = isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(199,210,254,1)';
 
@@ -61,7 +75,7 @@ textareaRef
             parts.push(<span key={`${lineIndex}-text-${lastIndex}`}>{line.substring(lastIndex, match.index)}</span>);
           }
           // マッチした部分を追加
-          const matchedNote = sortedNotes.find(n => n.name === match[0]);
+          const matchedNote = notesMap.get(match[0]);
           if (matchedNote) {
             const colorCfg = HIGHLIGHT_COLORS.find(c => c.id === matchedNote.parentColorId) || HIGHLIGHT_COLORS[0];
             parts.push(<span key={`${lineIndex}-highlight-${lastIndex}`} className={`${colorCfg.bg} ${colorCfg.border} border-b-2 text-transparent`}>{match[0]}</span>);
@@ -91,7 +105,23 @@ textareaRef
         </React.Fragment>
       );
     });
-  }, [activeItem?.content, allFlatNotes, isDarkMode]);
+
+    // 最下端スクロール時にtextareaの方が高く（深く）スクロールできてしまいズレるのを防ぐため、
+    // backdrop側にも余分な高さを確保する
+    return [...renderedLines, <br key="extra-padding-bottom" />];
+  }, [activeItem?.content, keywordPattern, notesMap, isDarkMode]);
+
+  // コンテンツが更新されたとき（特に行が増えて自動スクロールが発生したとき）に
+  // 背景のハイライト表示（backdrop）のスクロール位置をtextareaと同期させる
+  useEffect(() => {
+    const textarea = (textareaRef && typeof textareaRef === 'object' && textareaRef.current) 
+      ? textareaRef.current 
+      : document.getElementById('main-editor-textarea');
+    
+    if (textarea && backdropRef.current) {
+      backdropRef.current.scrollTop = textarea.scrollTop;
+    }
+  }, [activeItem?.content, textareaRef]);
 
   // ネイティブイベントレベルで親への伝播を強力に阻止する
   useEffect(() => {
@@ -117,7 +147,7 @@ textareaRef
     return () => {
       events.forEach(event => textarea.removeEventListener(event, stopPropagation));
     };
-  }, [textareaRef, activeId, activeItem]); // 画面切り替え時にも再実行されるように依存配列を追加
+  }, [textareaRef, activeId]); // activeItemを依存配列から削除（入力ごとの再登録を防ぐ）
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 z-10 shadow-2xl overflow-hidden relative font-serif transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-stone-900'}`}>
