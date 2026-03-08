@@ -129,6 +129,7 @@ export default function App() {
     includeNotes: true,
     includeColors: false,
   });
+  const [pendingScrollToHeading, setPendingScrollToHeading] = useState(null);
 
   const saveTimeoutRef = useRef(null);
   const deletingIdsRef = useRef(new Set()); 
@@ -339,21 +340,23 @@ export default function App() {
     saveTimeoutRef.current = setTimeout(() => saveRootDoc(rootId, type), AUTO_SAVE_DEBOUNCE_MS);
   }, [saveRootDoc]);
 
-  const getRootId = (targetId, type = 'item') => {
-    const list = type === 'item' ? itemsRef.current : notesRef.current;
-    for (const root of list) {
-      if (root.id === targetId) return root.id;
-      const check = (children) => {
-        for (const child of children) {
-          if (child.id === targetId) return true;
-          if (child.children && check(child.children)) return true;
-        }
-        return false;
-      };
-      if (root.children && check(root.children)) return root.id;
-    }
-    return targetId;
-  };
+  const getRootId = useCallback((targetId, type = 'item') => {
+      const list = type === 'item' ? itemsRef.current : notesRef.current;
+      for (const root of list) {
+        if (root.id === targetId) return root.id;
+        const check = (children) => {
+          for (const child of children) {
+            if (child.id === targetId) return true;
+            if (child.children && check(child.children)) return true;
+          }
+          return false;
+        };
+        if (root.children && check(root.children)) return root.id;
+      }
+      return targetId;
+    },
+    []
+  );
 
   const findInTree = (data, id) => {
     if (!id) return null;
@@ -388,12 +391,14 @@ export default function App() {
     triggerSave(rootId, 'item');
   };
 
-  const updateNoteLocal = (id, updates) => {
-    if (!id) return;
-    const rootId = getRootId(id, 'note');
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates } : n));
-    triggerSave(rootId, 'note');
-  };
+  const updateNoteLocal = useCallback(
+    (id, updates) => {
+      if (!id) return;
+      const rootId = getRootId(id, 'note');
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...updates } : n)));
+      triggerSave(rootId, 'note');
+    }, [getRootId, triggerSave]
+  );
 
   const createNewProject = async () => {
     if (!user || !db) return;
@@ -474,25 +479,41 @@ export default function App() {
   };
 
   const handleTextareaClick = useCallback((e) => {
-    const pos = e.target.selectionStart;
-    const text = activeItem?.content || "";
-    const matchedNote = allFlatNotes.find(n => {
-      if (!n.name) return false;
-      let index = text.indexOf(n.name);
-      while (index !== -1) {
-        if (pos >= index && pos <= index + n.name.length) return true;
-        index = text.indexOf(n.name, index + 1);
+      const pos = e.target.selectionStart;
+      const text = activeItem?.content || "";
+      const matchedNote = allFlatNotes.find(n => {
+        if (!n.name) return false;
+        let index = text.indexOf(n.name);
+        while (index !== -1) {
+          if (pos >= index && pos <= index + n.name.length) return true;
+          index = text.indexOf(n.name, index + 1);
+        }
+        return false;
+      });
+  
+      if (matchedNote) {
+        const parent = notes.find(cat => cat.id === matchedNote.parentId);
+  
+        const doScroll = () => {
+          const element = document.getElementById(`note-${matchedNote.id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        };
+  
+        setRightPanelOpen(true);
+        setActiveNoteId(matchedNote.id);
+  
+        if (parent && !parent.isOpen) {
+          updateNoteLocal(parent.id, { isOpen: true });
+          setTimeout(doScroll, 150);
+        } else {
+          setTimeout(doScroll, 0);
+        }
       }
-      return false;
-    });
-    if (matchedNote) {
-      setActiveNoteId(matchedNote.id);
-      setRightPanelOpen(true);
-      const parent = notes.find(cat => cat.id === matchedNote.parentId);
-      if (parent && !parent.isOpen) updateNoteLocal(parent.id, { isOpen: true });
-    }
-  }, [activeItem?.content, allFlatNotes, notes]);
+    }, [activeItem?.content, allFlatNotes, notes, updateNoteLocal]);
 
+  // 左パネルでサブアウトラインの見出しをクリックしたときに、その見出しの位置まで自動スクロールする処理
   const scrollToHeading = useCallback((headingText) => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -507,19 +528,21 @@ export default function App() {
     }
   }, []);
 
-  // 選択されたノートの要素まで自動スクロールする処理
-  useEffect(() => {
-    if (activeNoteId && rightPanelOpen) {
-      // カテゴリが閉じていた場合に開くのを待つため、わずかに遅延させる
-      const timer = setTimeout(() => {
-        const element = document.getElementById(`note-${activeNoteId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
+  const handleHeadingClick = useCallback((sceneId, heading) => {
+    if (activeId !== sceneId) {
+      setActiveId(sceneId);
+      setPendingScrollToHeading({ sceneId, heading });
+    } else {
+      scrollToHeading(heading);
     }
-  }, [activeNoteId, rightPanelOpen]);
+  }, [activeId, scrollToHeading]);
+
+  useEffect(() => {
+    if (pendingScrollToHeading && activeId === pendingScrollToHeading.sceneId) {
+      scrollToHeading(pendingScrollToHeading.heading);
+      setPendingScrollToHeading(null);
+    }
+  }, [activeId, pendingScrollToHeading, scrollToHeading]);
 
   const startResizingLeft = useCallback((e) => {
     e.preventDefault(); setIsResizing(true);
@@ -664,7 +687,7 @@ export default function App() {
         db={db}
         user={user}
         appId={appId}
-        onHeadingClick={scrollToHeading}
+        onHeadingClick={handleHeadingClick}
       />
 
       {leftSidebarOpen && <div onMouseDown={startResizingLeft} className={`w-1 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-40 flex-shrink-0 ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'} ${isResizing ? 'bg-indigo-500' : ''}`} />}
@@ -685,6 +708,7 @@ export default function App() {
           onExport={() => setShowExportModal(true)}
         />
         <Editor
+          ref={textareaRef}
           isDarkMode={isDarkMode}
           dataLoaded={dataLoaded}
           activeProjectId={activeProjectId}
@@ -692,10 +716,7 @@ export default function App() {
           activeId={activeId}
           fontSize={fontSize}
           allFlatNotes={allFlatNotes}
-          notes={notes}
           updateItemLocal={updateItemLocal}
-          setActiveNoteId={setActiveNoteId}
-          setRightPanelOpen={setRightPanelOpen}
           onTextareaClick={handleTextareaClick}
         />
       </main>

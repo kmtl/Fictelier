@@ -135,17 +135,9 @@ export const Sidebar = ({
                             <div 
                               key={i} 
                               onClick={(e) => {
-                                e.stopPropagation();
-                                if (activeId !== sc.id) {
-                                  setActiveId(sc.id);
-                                  if (onHeadingClick) {
-                                    setTimeout(() => onHeadingClick(h), 100);
-                                  }
-                                } else if (onHeadingClick) {
-                                  onHeadingClick(h);
-                                }
+                                e.stopPropagation(); onHeadingClick(sc.id, h);
                               }}
-                              className={`text-[10px] truncate flex items-center gap-1.5 py-0.5 cursor-pointer transition-colors ${isDarkMode ? 'text-zinc-500 hover:text-indigo-400' : 'text-zinc-400 hover:text-indigo-500'}`}
+                              className={`text-[12px] truncate flex items-center gap-1.5 py-0.5 cursor-pointer transition-colors ${isDarkMode ? 'text-zinc-500 hover:text-indigo-400' : 'text-zinc-400 hover:text-indigo-500'}`}
                             >
                               <span className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-zinc-700' : 'bg-zinc-300'}`}></span>
                               {h}

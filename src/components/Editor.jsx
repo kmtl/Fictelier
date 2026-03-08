@@ -1,9 +1,10 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useEffect, forwardRef } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { getHighlights } from '../utils/highlights';
 import { FONT_SIZES } from '../utils/constants';
 
-export const Editor = ({
+export const Editor = forwardRef((
+  {
   isDarkMode,
   dataLoaded,
   activeProjectId,
@@ -11,13 +12,11 @@ export const Editor = ({
   activeId,
   fontSize,
   allFlatNotes,
-  notes,
   updateItemLocal,
-  setActiveNoteId,
-  setRightPanelOpen,
   onTextareaClick,
-}) => {
-  const textareaRef = useRef(null);
+},
+textareaRef
+) => {
   const backdropRef = useRef(null);
 
   const handleScroll = (e) => {
@@ -25,26 +24,6 @@ export const Editor = ({
       backdropRef.current.scrollTop = e.target.scrollTop;
     }
   };
-
-  const handleTextareaClick = useCallback((e) => {
-    const pos = e.target.selectionStart;
-    const text = activeItem?.content || "";
-    const matchedNote = allFlatNotes.find(n => {
-      if (!n.name) return false;
-      let index = text.indexOf(n.name);
-      while (index !== -1) {
-        if (pos >= index && pos <= index + n.name.length) return true;
-        index = text.indexOf(n.name, index + 1);
-      }
-      return false;
-    });
-    if (matchedNote) {
-      setActiveNoteId(matchedNote.id);
-      setRightPanelOpen(true);
-      const parent = notes.find(cat => cat.id === matchedNote.parentId);
-      if (parent && !parent.isOpen) updateItemLocal(parent.id, { isOpen: true });
-    }
-  }, [activeItem?.content, allFlatNotes, notes, setActiveNoteId, setRightPanelOpen, updateItemLocal]);
 
   return (
     <main className={`flex-1 flex flex-col min-w-0 z-10 shadow-2xl overflow-hidden relative font-serif transition-colors ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-stone-900'}`}>
@@ -111,7 +90,7 @@ export const Editor = ({
                     ref={textareaRef} 
                     value={activeItem.content} 
                     onScroll={handleScroll} 
-                    onClick={handleTextareaClick} 
+                    onClick={onTextareaClick} 
                     onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} 
                     className={`absolute inset-0 w-full h-full bg-transparent border-none outline-none focus:ring-0 ${FONT_SIZES[fontSize]} leading-[2.2] font-serif resize-none p-0 placeholder:text-zinc-400 placeholder:opacity-20 ${isDarkMode ? 'text-zinc-100 caret-white' : 'text-stone-900 caret-black'} selection:text-current`} 
                     spellCheck="false" 
@@ -130,4 +109,4 @@ export const Editor = ({
       </div>
     </main>
   );
-};
+});
