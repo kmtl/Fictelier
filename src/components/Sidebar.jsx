@@ -113,10 +113,23 @@ export const Sidebar = ({
                   return (
                     <div key={sc.id} className="mb-1">
                       <div 
-                        onClick={() => setActiveId(sc.id)} 
+                        onClick={() => {
+                          setActiveId(sc.id);
+                          if (headings.length > 0) {
+                            updateItemLocal(sc.id, { isHeadingsOpen: !sc.isHeadingsOpen });
+                          }
+                        }}
                         className={`flex items-center p-2 rounded-lg cursor-pointer group text-xs transition-all ${activeId === sc.id ? (isDarkMode ? 'bg-indigo-900/40 text-indigo-400 font-bold border-l-2 border-indigo-500' : 'bg-indigo-50 text-indigo-600 font-bold border-l-2 border-indigo-500') : (isDarkMode ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-zinc-100 text-zinc-500')}`}
                       >
-                        <FileText size={12} className="mr-2 opacity-40" />
+                        {headings.length > 0 ? (
+                          <div
+                            className="mr-2 opacity-50 hover:opacity-100 transition-opacity"
+                          >
+                            {sc.isHeadingsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                          </div>
+                        ) : (
+                          <FileText size={12} className="mr-2 opacity-40" />
+                        )}
                         <span className="flex-1 truncate">{sc.title}</span>
                         <button 
                           onClick={(e) => { 
@@ -129,7 +142,7 @@ export const Sidebar = ({
                         </button>
                       </div>
                       
-                      {headings.length > 0 && (
+                      {headings.length > 0 && sc.isHeadingsOpen && (
                         <div className={`ml-4 mt-0.5 border-l pl-2 space-y-0.5 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
                           {headings.map((h, i) => (
                             <div 
