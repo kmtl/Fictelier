@@ -627,6 +627,7 @@ export default function App() {
           setActiveId(newSceneId);
         }}
         updateItemLocal={updateItemLocal}
+        setItems={setItems}
         projects={projects}
         activeProjectId={activeProjectId}
         setProjects={setProjects}
