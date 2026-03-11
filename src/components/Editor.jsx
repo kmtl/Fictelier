@@ -13,7 +13,7 @@ export const Editor = forwardRef((
   fontSize,
   allFlatNotes,
   updateItemLocal,
-  onTextareaClick,
+  onHighlightClick,
 },
 textareaRef
 ) => {
@@ -32,18 +32,44 @@ textareaRef
   // パフォーマンス改善: ハイライト用の正規表現と検索マップの生成をテキスト更新から分離
   // これにより、文字入力のたびに重い正規表現生成やソート処理が走るのを防ぐ
   const { keywordPattern, notesMap } = useMemo(() => {
-    const validNotes = allFlatNotes.filter(n => n.name);
+    const keywords = [];
     
-    // 長い順にソート（正規表現のマッチング順序用）
-    const sortedNotes = [...validNotes].sort((a, b) => b.name.length - a.name.length);
+    // 全ノートから名前とエイリアスを抽出してキーワードリストを作成
+    allFlatNotes.forEach(note => {
+      // メインの項目名
+      if (note.name && note.name.trim()) {
+        keywords.push({ text: note.name.trim(), note });
+      }
+      // 別名・タグ（カンマまたは読点で区切る）
+      if (note.aliases) {
+        const aliases = note.aliases.split(/[,、]/);
+        aliases.forEach(alias => {
+          const trimmed = alias.trim();
+          if (trimmed) {
+            keywords.push({ text: trimmed, note });
+          }
+        });
+      }
+    });
     
-    const pattern = sortedNotes.length > 0
-      ? new RegExp(`(${sortedNotes.map(n => n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
-      : null;
+    // 長い順にソート（正規表現のマッチングで長い単語を優先するため）
+    keywords.sort((a, b) => b.text.length - a.text.length);
 
-    // 高速検索用のMap作成
+    // 高速検索用のMap作成と正規表現パターンの生成
     const map = new Map();
-    validNotes.forEach(n => map.set(n.name, n));
+    const uniqueTexts = [];
+    
+    keywords.forEach(({ text, note }) => {
+      // 重複がある場合は先に見つかった（長い）方を優先
+      if (!map.has(text)) {
+        map.set(text, note);
+        uniqueTexts.push(text);
+      }
+    });
+    
+    const pattern = uniqueTexts.length > 0
+      ? new RegExp(`(${uniqueTexts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
+      : null;
 
     return { keywordPattern: pattern, notesMap: map };
   }, [allFlatNotes]);
@@ -78,7 +104,12 @@ textareaRef
           const matchedNote = notesMap.get(match[0]);
           if (matchedNote) {
             const colorCfg = HIGHLIGHT_COLORS.find(c => c.id === matchedNote.parentColorId) || HIGHLIGHT_COLORS[0];
-            parts.push(<span key={`${lineIndex}-highlight-${lastIndex}`} className={`${colorCfg.bg} ${colorCfg.border} border-b-2 text-transparent`}>{match[0]}</span>);
+            parts.push(<span 
+              key={`${lineIndex}-highlight-${lastIndex}`} 
+              className={`${colorCfg.bg} ${colorCfg.border} border-b-2 text-transparent`}
+            >
+              {match[0]}
+            </span>);
           }
           lastIndex = keywordPattern.lastIndex;
         }
@@ -109,7 +140,42 @@ textareaRef
     // 最下端スクロール時にtextareaの方が高く（深く）スクロールできてしまいズレるのを防ぐため、
     // backdrop側にも余分な高さを確保する
     return [...renderedLines, <br key="extra-padding-bottom" />];
-  }, [activeItem?.content, keywordPattern, notesMap, isDarkMode]);
+  }, [activeItem?.content, keywordPattern, notesMap, isDarkMode, onHighlightClick]);
+
+  // テキストエリアクリック時に、カーソル位置にあるキーワードを判定してイベントを発火する
+  // これにより、z-indexやpointer-eventsの重なり問題を回避して確実にクリックを検知できる
+  const handleTextareaClick = (e) => {
+    if (!keywordPattern || !onHighlightClick) return;
+
+    const textarea = e.target;
+    const text = textarea.value;
+    const cursorIndex = textarea.selectionStart;
+
+    // カーソルがある行のテキストと、その行内でのカーソル位置を特定する
+    const textUpToCursor = text.substring(0, cursorIndex);
+    const lineStartIndex = textUpToCursor.lastIndexOf('\n') + 1;
+    const nextNewlineIndex = text.indexOf('\n', cursorIndex);
+    const lineEndIndex = nextNewlineIndex !== -1 ? nextNewlineIndex : text.length;
+    
+    const currentLineText = text.substring(lineStartIndex, lineEndIndex);
+    const cursorIndexInLine = cursorIndex - lineStartIndex;
+
+    keywordPattern.lastIndex = 0;
+    let match;
+    // 現在の行に対してのみ正規表現を実行
+    while ((match = keywordPattern.exec(currentLineText)) !== null) {
+      const startInLine = match.index;
+      const endInLine = startInLine + match[0].length;
+
+      if (cursorIndexInLine >= startInLine && cursorIndexInLine < endInLine) {
+        const matchedNote = notesMap.get(match[0]);
+        if (matchedNote) {
+          onHighlightClick(matchedNote);
+          return; // 一致するものが見つかったら終了
+        }
+      }
+    }
+  };
 
   // コンテンツが更新されたとき（特に行が増えて自動スクロールが発生したとき）に
   // 背景のハイライト表示（backdrop）のスクロール位置をtextareaと同期させる
@@ -216,7 +282,7 @@ textareaRef
                     ref={textareaRef} 
                     value={activeItem.content} 
                     onScroll={handleScroll}
-                    onClick={(e) => { e.stopPropagation(); onTextareaClick && onTextareaClick(e); }}
+                    onClick={handleTextareaClick}
                     onChange={(e) => updateItemLocal(activeId, { content: e.target.value })} 
                     draggable="false"
                     style={{ userSelect: 'text', WebkitUserSelect: 'text', pointerEvents: 'auto' }}

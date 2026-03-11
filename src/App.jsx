@@ -117,7 +117,6 @@ export default function App() {
   const deletingIdsRef = useRef(new Set()); 
   const itemsRef = useRef([]);
   const notesRef = useRef([]);
-  const backdropRef = useRef(null);
   const textareaRef = useRef(null);
 
   const exportProject = useCallback(async () => {
@@ -308,23 +307,24 @@ export default function App() {
     saveTimeoutRef.current = setTimeout(() => saveRootDoc(rootId, type), AUTO_SAVE_DEBOUNCE_MS);
   }, [saveRootDoc]);
 
+  const childToRootMap = useMemo(() => {
+    const itemMap = new Map();
+    const noteMap = new Map();
+    items.forEach(root => {
+      itemMap.set(root.id, root.id);
+      root.children?.forEach(child => itemMap.set(child.id, root.id));
+    });
+    notes.forEach(root => {
+      noteMap.set(root.id, root.id);
+      root.children?.forEach(child => noteMap.set(child.id, root.id));
+    });
+    return { items: itemMap, notes: noteMap };
+  }, [items, notes]);
+
   const getRootId = useCallback((targetId, type = 'item') => {
-      const list = type === 'item' ? itemsRef.current : notesRef.current;
-      for (const root of list) {
-        if (root.id === targetId) return root.id;
-        const check = (children) => {
-          for (const child of children) {
-            if (child.id === targetId) return true;
-            if (child.children && check(child.children)) return true;
-          }
-          return false;
-        };
-        if (root.children && check(root.children)) return root.id;
-      }
-      return targetId;
-    },
-    []
-  );
+    const map = type === 'item' ? childToRootMap.items : childToRootMap.notes;
+    return map.get(targetId) || targetId; // Fallback for safety
+  }, [childToRootMap]);
 
   const findInTree = (data, id) => {
     if (!id) return null;
@@ -418,68 +418,13 @@ export default function App() {
     }
   };
 
-  const getHighlights = (t) => {
-    if (!t) return "";
-    let h = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-    // ハッシュ先頭行に背景だけ付ける(色はインラインスタイルで指定)
-    const bgColor = isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(199,210,254,1)';
-    h = h.split('\n').map(line => {
-      if (line.startsWith('# ')) {
-        return `<span style="background:${bgColor};color:transparent;display:inline-block;width:100%">${line}</span>`;
-      }
-      return line;
-    }).join('\n');
-
-    [...allFlatNotes].sort((a,b) => b.name.length - a.name.length).forEach(n => {
-      if (!n.name) return;
-      const colorCfg = HIGHLIGHT_COLORS.find(c => c.id === n.parentColorId) || HIGHLIGHT_COLORS[0];
-      const cls = `${colorCfg.bg} ${colorCfg.border} border-b-2 text-transparent`;
-      h = h.replace(new RegExp(`(${n.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'), `<span class="${cls}">$1</span>`);
-    });
-    return h.replace(/\n/g, '<br/>') + ' ';
-  };
-
-  const handleScroll = (e) => {
-    if (backdropRef.current) {
-      backdropRef.current.scrollTop = e.target.scrollTop;
-    }
-  };
-
-  const handleTextareaClick = useCallback((e) => {
-      const pos = e.target.selectionStart;
-      const text = activeItem?.content || "";
-      const matchedNote = allFlatNotes.find(n => {
-        if (!n.name) return false;
-        let index = text.indexOf(n.name);
-        while (index !== -1) {
-          if (pos >= index && pos <= index + n.name.length) return true;
-          index = text.indexOf(n.name, index + 1);
-        }
-        return false;
-      });
-  
-      if (matchedNote) {
-        const parent = notes.find(cat => cat.id === matchedNote.parentId);
-  
-        const doScroll = () => {
-          const element = document.getElementById(`note-${matchedNote.id}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        };
-  
-        setRightPanelOpen(true);
-        setActiveNoteId(matchedNote.id);
-  
-        if (parent && !parent.isOpen) {
-          updateNoteLocal(parent.id, { isOpen: true });
-          setTimeout(doScroll, 150);
-        } else {
-          setTimeout(doScroll, 0);
-        }
-      }
-    }, [activeItem?.content, allFlatNotes, notes, updateNoteLocal]);
+  const handleHighlightClick = useCallback((note) => {
+    if (!note) return;
+    // 右パネルを開く
+    setRightPanelOpen(true);
+    // NotesPanel側でスクロールとカテゴリ展開が実行されるようにIDをセット
+    setActiveNoteId(note.id);
+  }, []);
 
   // 左パネルでサブアウトラインの見出しをクリックしたときに、その見出しの位置まで自動スクロールする処理
   const scrollToHeading = useCallback((headingText) => {
@@ -664,7 +609,7 @@ export default function App() {
           fontSize={fontSize}
           allFlatNotes={allFlatNotes}
           updateItemLocal={updateItemLocal}
-          onTextareaClick={handleTextareaClick}
+          onHighlightClick={handleHighlightClick}
         />
       </main>
 
