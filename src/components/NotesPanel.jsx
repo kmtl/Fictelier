@@ -1,5 +1,5 @@
-import React, { useRef, useCallback, useEffect } from 'react';
-import { Tags, FolderPlus, ChevronDown, ChevronRight, Plus, Trash2, X, Palette } from 'lucide-react';
+import React, { useRef, useCallback, useEffect, useMemo } from 'react';
+import { Tags, FolderPlus, ChevronDown, ChevronRight, Plus, Trash2, X, Palette, AlertCircle } from 'lucide-react';
 import { HIGHLIGHT_COLORS, generateId } from '../utils/constants';
 
 const AutoResizeNoteTextarea = ({ value, onChange, placeholder, isDarkMode, panelWidth }) => {
@@ -48,6 +48,40 @@ export const NotesPanel = ({
   onAddCategory,
   onDeleteNote,
 }) => {
+  // 全てのノートの名前の出現回数をカウントして重複チェックに使用
+  const nameCounts = useMemo(() => {
+    const counts = {};
+    notes.forEach(cat => {
+      cat.children?.forEach(note => {
+        const name = note.name?.trim();
+        if (name) {
+          counts[name] = (counts[name] || 0) + 1;
+        }
+      });
+    });
+    return counts;
+  }, [notes]);
+
+  const getUniqueNewItemName = () => {
+    const baseName = '新項目';
+    const allNames = new Set();
+    notes.forEach(cat => {
+      cat.children?.forEach(n => {
+        if (n.name) allNames.add(n.name);
+      });
+    });
+
+    if (!allNames.has(baseName)) return baseName;
+    
+    let counter = 1;
+    let name = `${baseName} (${counter})`;
+    while (allNames.has(name)) {
+      counter++;
+      name = `${baseName} (${counter})`;
+    }
+    return name;
+  };
+
   return (
     <aside style={{ width: rightPanelOpen ? `${rightWidth}px` : '0px' }} className={`flex-shrink-0 border-l flex flex-col z-30 overflow-hidden relative transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
       <div className={`h-16 flex items-center px-6 justify-between border-b flex-shrink-0 ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-zinc-200'}`}>
@@ -109,7 +143,7 @@ export const NotesPanel = ({
                 <button 
                   onClick={e => { 
                     e.stopPropagation(); 
-                    updateNoteLocal(cat.id, { children: [...(cat.children || []), { id: generateId('nt'), name: '新項目', description: '', order: Date.now() }], isOpen: true }); 
+                    updateNoteLocal(cat.id, { children: [...(cat.children || []), { id: generateId('nt'), name: getUniqueNewItemName(), description: '', order: Date.now() }], isOpen: true }); 
                   }} 
                   className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-lg"
                 >
@@ -129,44 +163,54 @@ export const NotesPanel = ({
 
             {cat.isOpen && (
               <div className="p-4 space-y-4">
-                {cat.children && cat.children.length > 0 ? cat.children.map((n) => (
-                  <div 
-                    key={n.id} 
-                    id={`note-${n.id}`} 
-                    onClick={() => setActiveNoteId(n.id)} 
-                    className={`p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative ${activeNoteId === n.id ? (isDarkMode ? 'bg-zinc-800 border-indigo-500 shadow-xl ring-1 ring-indigo-500 scale-[1.02]' : 'bg-white border-indigo-400 shadow-xl ring-1 ring-indigo-400 scale-[1.02]') : (isDarkMode ? 'bg-zinc-900 border-transparent hover:border-zinc-700' : 'bg-white border-transparent hover:border-zinc-200 hover:shadow-md')}`}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-3 h-3 rounded-full shadow-sm ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
-                      <input 
-                        className={`flex-1 bg-transparent border-none text-sm font-black focus:ring-0 p-0 ${isDarkMode ? 'text-zinc-100' : 'text-stone-900'}`} 
-                        value={n.name || ''} 
-                        onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, name: e.target.value } : c) })} 
-                        onClick={e => e.stopPropagation()} 
-                        placeholder="Entry Name..." 
+                {cat.children && cat.children.length > 0 ? cat.children.map((n) => {
+                  const isDuplicate = n.name && nameCounts[n.name.trim()] > 1;
+                  return (
+                    <div 
+                      key={n.id} 
+                      id={`note-${n.id}`} 
+                      onClick={() => setActiveNoteId(n.id)} 
+                      className={`p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative ${activeNoteId === n.id ? (isDarkMode ? 'bg-zinc-800 border-indigo-500 shadow-xl ring-1 ring-indigo-500 scale-[1.02]' : 'bg-white border-indigo-400 shadow-xl ring-1 ring-indigo-400 scale-[1.02]') : (isDarkMode ? 'bg-zinc-900 border-transparent hover:border-zinc-700' : 'bg-white border-transparent hover:border-zinc-200 hover:shadow-md')}`}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-3 h-3 rounded-full shadow-sm ${HIGHLIGHT_COLORS.find(c => c.id === cat.colorId)?.dot || 'bg-amber-500'}`} />
+                        <div className="flex-1 relative">
+                          <input 
+                            className={`w-full bg-transparent border-none text-sm font-black focus:ring-0 p-0 ${isDuplicate ? 'text-red-500' : (isDarkMode ? 'text-zinc-100' : 'text-stone-900')}`} 
+                            value={n.name || ''} 
+                            onChange={e => updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, name: e.target.value } : c) })} 
+                            onClick={e => e.stopPropagation()} 
+                            placeholder="Entry Name..." 
+                          />
+                          {isDuplicate && (
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-red-500 animate-pulse" title="この名前は既に使用されています">
+                              <AlertCircle size={14} />
+                            </div>
+                          )}
+                        </div>
+                        <button 
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            onDeleteNote({ id: n.id, title: n.name, type: 'note', parentId: cat.id }); 
+                          }} 
+                          className="text-zinc-400 hover:text-red-500 transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      
+                      <AutoResizeNoteTextarea 
+                        value={n.description || ''} 
+                        isDarkMode={isDarkMode}
+                        panelWidth={rightWidth}
+                        placeholder="Write details here..." 
+                        onChange={e => {
+                          updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, description: e.target.value } : c) });
+                        }}
                       />
-                      <button 
-                        onClick={e => { 
-                          e.stopPropagation(); 
-                          onDeleteNote({ id: n.id, title: n.name, type: 'note', parentId: cat.id }); 
-                        }} 
-                        className="text-zinc-400 hover:text-red-500 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
                     </div>
-                    
-                    <AutoResizeNoteTextarea 
-                      value={n.description || ''} 
-                      isDarkMode={isDarkMode}
-                      panelWidth={rightWidth}
-                      placeholder="Write details here..." 
-                      onChange={e => {
-                        updateNoteLocal(cat.id, { children: cat.children.map(c => c.id === n.id ? { ...c, description: e.target.value } : c) });
-                      }}
-                    />
-                  </div>
-                )) : (
+                  );
+                }) : (
                   <div className="py-8 text-center opacity-20">
                     <Plus size={24} className="mx-auto mb-2" />
                     <p className="text-[10px] font-black uppercase tracking-widest">No entries yet</p>

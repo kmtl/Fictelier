@@ -86,7 +86,7 @@ export const Sidebar = ({
         </div>
         <div className="w-full flex justify-center pointer-events-none">
           <span className="text-xs font-black italic tracking-tighter flex items-center gap-1.5 truncate pr-1">
-            <FictelierLogo size={14} className="text-indigo-500" /> OUTLINE
+            <FictelierLogo size={14} className="text-indigo-500" /> STORY OUTLINE
           </span>
         </div>
         <div className="absolute right-4 z-10">
