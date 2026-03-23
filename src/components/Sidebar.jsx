@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Plus, Trash2, FileText, ChevronLeft } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { FictelierLogo } from '../icons/FictelierLogo';
-import { generateId } from '../utils/constants';
+import { generateId, AUTO_SAVE_DEBOUNCE_MS } from '../utils/constants';
 
 export const Sidebar = ({
   isDarkMode,
@@ -26,6 +26,15 @@ export const Sidebar = ({
   appId,
   onHeadingClick,
 }) => {
+
+  const projectTitleTimeoutRef = useRef(null);
+  const activeProject = projects.find(p => p.id === activeProjectId);
+  const [localTitle, setLocalTitle] = useState(activeProject?.title || '');
+
+  // プロジェクトが切り替わったり、外部でタイトルが更新された場合に同期する
+  useEffect(() => {
+    setLocalTitle(activeProject?.title || '');
+  }, [activeProject?.title, activeProjectId]);
 
   const onDragEnd = (result) => {
     const { source, destination } = result;
@@ -100,16 +109,22 @@ export const Sidebar = ({
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll">
-        <div className="px-2 py-2 mb-4">
+        <div className="px-2 pt-2 pb-4 mb-4 border-b border-dashed dark:border-zinc-800 border-zinc-200">
           <input 
-            className={`w-full bg-transparent border-none text-[11px] font-black italic focus:ring-0 p-0 transition-opacity ${isDarkMode ? 'text-zinc-500 opacity-60 hover:opacity-100' : 'text-zinc-400 opacity-60 hover:opacity-100'}`} 
-            value={projects.find(p => p.id === activeProjectId)?.title || ''} 
+            className={`w-full bg-transparent border-none text-xl font-black focus:ring-0 p-2 rounded-lg transition-colors ${isDarkMode ? 'text-indigo-400 placeholder:text-zinc-600 hover:bg-zinc-900 focus:bg-zinc-800' : 'text-indigo-600 placeholder:text-zinc-400 hover:bg-zinc-100 focus:bg-zinc-100'}`} 
+            value={localTitle} 
             onChange={(e) => {
               if(!db) return;
               const title = e.target.value;
-              setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, title } : p));
-              setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { title, updatedAt: Date.now() }, { merge: true });
+              setLocalTitle(title);
+              
+              if (projectTitleTimeoutRef.current) clearTimeout(projectTitleTimeoutRef.current);
+              projectTitleTimeoutRef.current = setTimeout(() => {
+                setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, title } : p));
+                setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'fictelier_projects', activeProjectId), { title, updatedAt: Date.now() }, { merge: true });
+              }, AUTO_SAVE_DEBOUNCE_MS);
             }}
+            placeholder="作品タイトル..."
           />
         </div>
         
