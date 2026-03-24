@@ -234,17 +234,18 @@ textareaRef
             />
             
             <div className="relative flex-1 isolate">
-              {activeItem.children && activeItem.children.length > 0 ? (
+              {(activeItem.type === 'chapter' || (activeItem.children && activeItem.children.length > 0)) ? (
                 <div className={`p-6 space-y-8 ${FONT_SIZES[fontSize]} leading-relaxed`}>
                   <div>
                     <h2 className="text-xs font-black uppercase tracking-widest mb-4 opacity-70">全体</h2>
                     <div className="space-y-2">
                       <div className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                        所属話数: <span className="font-bold">{activeItem.children.length}話</span>
+                        所属話数: <span className="font-bold">{activeItem.children?.length || 0}話</span>
                       </div>
                       {(() => {
-                        const totalChars = activeItem.children.reduce((sum, child) => sum + (child.content?.length || 0), 0);
-                        const avgChars = Math.round(totalChars / activeItem.children.length);
+                        const children = activeItem.children || [];
+                        const totalChars = children.reduce((sum, child) => sum + (child.content?.length || 0), 0);
+                        const avgChars = children.length > 0 ? Math.round(totalChars / children.length) : 0;
                         return (
                           <>
                             <div className={`text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
@@ -261,11 +262,16 @@ textareaRef
                   <div>
                     <h2 className="text-xs font-black uppercase tracking-widest mb-4 opacity-70">各話タイトル</h2>
                     <div className="space-y-2">
-                      {activeItem.children.map((scene, idx) => (
+                      {activeItem.children?.map((scene, idx) => (
                         <div key={scene.id} className={`text-sm ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
                           {String(idx + 1).padStart(3, '0')}__{scene.title || `Scene${idx + 1}`}
                         </div>
                       ))}
+                      {(!activeItem.children || activeItem.children.length === 0) && (
+                        <div className={`text-sm italic opacity-50 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          シーンがありません
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
